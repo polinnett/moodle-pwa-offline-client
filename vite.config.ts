@@ -13,23 +13,24 @@ export default defineConfig({
         name: "Moodle Offline Client",
         short_name: "MoodlePWA",
         description: "Офлайн-клиент для Moodle LMS",
-        theme_color: "#f97316",
+        theme_color: "#22c55e",
         background_color: "#ffffff",
         display: "standalone",
         start_url: "/",
         icons: [
-          {
-            src: "icons/icon-192.png",
-            sizes: "192x192",
-            type: "image/png",
-          },
-          {
-            src: "icons/icon-512.png",
-            sizes: "512x512",
-            type: "image/png",
-          },
+          { src: "icons/icon-192.png", sizes: "192x192", type: "image/png" },
+          { src: "icons/icon-512.png", sizes: "512x512", type: "image/png" },
         ],
       },
     }),
   ],
+  server: {
+    proxy: {
+      "/moodle-api": {
+        target: "http://localhost:8000",
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/moodle-api/, ""),
+      },
+    },
+  },
 });
