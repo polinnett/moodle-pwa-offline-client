@@ -2,10 +2,11 @@ import { useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useState, useEffect } from 'react'
 import { getCourseContents } from '../api/moodle'
-import { getOfflineCourse } from '../db'
+import { saveLessonOffline, getOfflineLesson, deleteOfflineLesson, getOfflineCourse } from '../db'
 import { useOfflineStatus } from '../hooks/useOfflineStatus'
 import { Layout } from '../components/Layout'
 import type { CourseModule } from '../types'
+
 
 const proxyUrl = (url: string) =>
   url.replace('http://localhost:8000', '/moodle-api')
@@ -27,20 +28,58 @@ const DownloadIcon = () => (
   </svg>
 )
 
-const PageContent = ({ module }: { module: CourseModule }) => {
+const PageContent = ({ module, courseId }: { module: CourseModule; courseId: number }) => {
   const [html, setHtml] = useState('')
   const [loading, setLoading] = useState(true)
+  const [isSaved, setIsSaved] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const isOnline = useOfflineStatus()
   const token = localStorage.getItem('moodle_token')
 
   useEffect(() => {
-    const htmlFile = module.contents?.find(c => c.filename === 'index.html')
-    if (!htmlFile) { setLoading(false); return }
-    const url = `${proxyUrl(htmlFile.fileurl)}&token=${token}`
-    fetch(url)
-      .then(r => r.text())
-      .then(text => { setHtml(text); setLoading(false) })
-      .catch(() => setLoading(false))
-  }, [module, token])
+    const load = async () => {
+      const offline = await getOfflineLesson(module.id)
+      if (offline) {
+        setHtml(offline.html)
+        setIsSaved(true)
+        setLoading(false)
+        return
+      }
+
+      if (!isOnline) { setLoading(false); return }
+
+      const htmlFile = module.contents?.find(c => c.filename === 'index.html')
+      if (!htmlFile) { setLoading(false); return }
+
+      const url = `${proxyUrl(htmlFile.fileurl)}&token=${token}`
+      fetch(url)
+        .then(r => r.text())
+        .then(text => { setHtml(text); setLoading(false) })
+        .catch(() => setLoading(false))
+    }
+    load()
+  }, [module, token, isOnline])
+
+  const handleSave = async () => {
+    setSaving(true)
+    try {
+      await saveLessonOffline({
+        id: module.id,
+        courseId,
+        name: module.name,
+        html,
+        savedAt: Date.now(),
+      })
+      setIsSaved(true)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleDelete = async () => {
+    await deleteOfflineLesson(module.id)
+    setIsSaved(false)
+  }
 
   if (loading) {
     return (
@@ -52,12 +91,66 @@ const PageContent = ({ module }: { module: CourseModule }) => {
     )
   }
 
+  if (!html) {
+    return (
+      <div className="rounded-2xl p-6 text-center
+        bg-white dark:bg-gray-800
+        border border-green-100 dark:border-gray-700"
+      >
+        <div className="text-4xl mb-3">📭</div>
+        <p className="text-sm text-gray-500 dark:text-gray-400">
+          {isOnline ? 'Не удалось загрузить лекцию' : 'Лекция не сохранена офлайн'}
+        </p>
+      </div>
+    )
+  }
+
   return (
-    <div
-      className="prose prose-green dark:prose-invert max-w-none
-        text-gray-800 dark:text-gray-200"
-      dangerouslySetInnerHTML={{ __html: html }}
-    />
+    <div className="space-y-4">
+      <div className="flex justify-end">
+        {isSaved ? (
+          <button
+            onClick={handleDelete}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm
+              font-medium cursor-pointer transition-colors
+              bg-green-100 text-green-700 hover:bg-red-100 hover:text-red-600
+              dark:bg-green-900 dark:text-green-300
+              dark:hover:bg-red-900/30 dark:hover:text-red-400"
+          >
+            <span>✓</span>
+            <span>Сохранена офлайн — удалить</span>
+          </button>
+        ) : (
+          <button
+            onClick={handleSave}
+            disabled={saving || !html}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm
+              font-medium cursor-pointer transition-colors
+              bg-green-500 text-white hover:bg-green-600
+              dark:bg-green-600 dark:hover:bg-green-500
+              disabled:opacity-50"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+              viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="7 10 12 15 17 10"/>
+              <line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            <span>{saving ? 'Сохраняем...' : 'Сохранить офлайн'}</span>
+          </button>
+        )}
+      </div>
+
+      <div
+        className="rounded-2xl p-5
+          bg-white dark:bg-gray-800
+          border border-green-100 dark:border-gray-700
+          prose prose-green dark:prose-invert max-w-none
+          text-gray-800 dark:text-gray-200"
+        dangerouslySetInnerHTML={{ __html: html }}
+      />
+    </div>
   )
 }
 
@@ -291,7 +384,7 @@ export const LessonPage = () => {
   const renderContent = () => {
     if (!module) return null
     switch (getModuleType(module)) {
-      case 'page':  return <PageContent module={module} />
+      case 'page': return <PageContent module={module} courseId={id} />
       case 'video': return <VideoContent module={module} />
       case 'quiz':  return <QuizContent />
       default:      return <UnsupportedContent module={module} />
