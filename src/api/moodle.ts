@@ -45,3 +45,13 @@ export const getCourseContents = async (
   const response = await ws("core_course_get_contents", { courseid: courseId });
   return response.data;
 };
+
+export const getPageContent = async (moduleId: number): Promise<string> => {
+  const response = await ws("mod_page_get_pages_by_courses", {});
+  const pages = response.data.pages as Array<{
+    coursemodule: number;
+    content: string;
+  }>;
+  const page = pages.find((p) => p.coursemodule === moduleId);
+  return page?.content ?? "";
+};

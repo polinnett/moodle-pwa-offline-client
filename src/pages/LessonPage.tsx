@@ -1,3 +1,315 @@
+import { useParams } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
+import { useState, useEffect } from 'react'
+import { getCourseContents } from '../api/moodle'
+import { getOfflineCourse } from '../db'
+import { useOfflineStatus } from '../hooks/useOfflineStatus'
+import { Layout } from '../components/Layout'
+import type { CourseModule } from '../types'
+
+const proxyUrl = (url: string) =>
+  url.replace('http://localhost:8000', '/moodle-api')
+
+const fileUrl = (url: string) => {
+  const token = localStorage.getItem('moodle_token')
+  return `${proxyUrl(url)}&token=${token}`
+}
+
+const DownloadIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+    viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+    className="text-green-500 shrink-0"
+  >
+    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+    <polyline points="7 10 12 15 17 10"/>
+    <line x1="12" y1="15" x2="12" y2="3"/>
+  </svg>
+)
+
+const PageContent = ({ module }: { module: CourseModule }) => {
+  const [html, setHtml] = useState('')
+  const [loading, setLoading] = useState(true)
+  const token = localStorage.getItem('moodle_token')
+
+  useEffect(() => {
+    const htmlFile = module.contents?.find(c => c.filename === 'index.html')
+    if (!htmlFile) { setLoading(false); return }
+    const url = `${proxyUrl(htmlFile.fileurl)}&token=${token}`
+    fetch(url)
+      .then(r => r.text())
+      .then(text => { setHtml(text); setLoading(false) })
+      .catch(() => setLoading(false))
+  }, [module, token])
+
+  if (loading) {
+    return (
+      <div className="animate-pulse space-y-3">
+        {[1, 2, 3, 4].map(i => (
+          <div key={i} className="h-4 bg-gray-200 dark:bg-gray-700 rounded"/>
+        ))}
+      </div>
+    )
+  }
+
+  return (
+    <div
+      className="prose prose-green dark:prose-invert max-w-none
+        text-gray-800 dark:text-gray-200"
+      dangerouslySetInnerHTML={{ __html: html }}
+    />
+  )
+}
+
+const VideoContent = ({ module }: { module: CourseModule }) => {
+    const videoFile = module.contents?.find(c => c.mimetype === 'video/mp4')
+    if (!videoFile) return null
+  
+    const videoSrc = fileUrl(videoFile.fileurl)
+    const fileSizeMb = (videoFile.filesize / 1024 / 1024).toFixed(1)
+  
+    const [cachedUrl, setCachedUrl] = useState<string | null>(null)
+    const [caching, setCaching] = useState(false)
+    const [cacheProgress, setCacheProgress] = useState(0)
+  
+    useEffect(() => {
+      const checkCache = async () => {
+        const cache = await caches.open('moodle-videos')
+        const match = await cache.match(videoSrc)
+        if (match) {
+          const blob = await match.blob()
+          setCachedUrl(URL.createObjectURL(blob))
+        }
+      }
+      checkCache()
+    }, [videoSrc])
+  
+    const handleSaveOffline = async () => {
+      setCaching(true)
+      setCacheProgress(0)
+      try {
+        const token = localStorage.getItem('moodle_token')
+        const response = await fetch(videoSrc, {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+        const reader = response.body?.getReader()
+        const contentLength = Number(response.headers.get('Content-Length') ?? videoFile.filesize)
+        const chunks: Uint8Array[] = []
+        let received = 0
+  
+        if (reader) {
+          while (true) {
+            const { done, value } = await reader.read()
+            if (done) break
+            chunks.push(value)
+            received += value.length
+            setCacheProgress(Math.round((received / contentLength) * 100))
+          }
+        }
+  
+        const blob = new Blob(chunks, { type: 'video/mp4' })
+        const cache = await caches.open('moodle-videos')
+        await cache.put(videoSrc, new Response(blob, {
+          headers: { 'Content-Type': 'video/mp4' }
+        }))
+        setCachedUrl(URL.createObjectURL(blob))
+      } finally {
+        setCaching(false)
+      }
+    }
+  
+    const handleDeleteCache = async () => {
+      const cache = await caches.open('moodle-videos')
+      await cache.delete(videoSrc)
+      setCachedUrl(null)
+    }
+  
+    return (
+      <div className="space-y-4">
+        <div className="rounded-2xl overflow-hidden bg-black">
+          <video controls className="w-full max-h-72" src={cachedUrl ?? videoSrc}>
+            Ваш браузер не поддерживает видео
+          </video>
+        </div>
+  
+        <div className="rounded-2xl p-4 space-y-2 bg-white dark:bg-gray-800 border border-green-100 dark:border-gray-700">
+          <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+            Офлайн-доступ
+          </p>
+  
+          {cachedUrl ? (
+            <button
+              onClick={handleDeleteCache}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors cursor-pointer bg-green-50 hover:bg-red-50 dark:bg-gray-700 dark:hover:bg-red-900/20"
+            >
+              <span className="text-xl">✅</span>
+              <div className="flex-1 text-left">
+                <p className="text-sm font-medium text-gray-800 dark:text-white">Сохранено офлайн</p>
+                <p className="text-xs text-gray-400">Нажмите чтобы удалить из кэша</p>
+              </div>
+            </button>
+          ) : (
+            <button
+              onClick={handleSaveOffline}
+              disabled={caching}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors cursor-pointer bg-green-50 hover:bg-green-100 dark:bg-gray-700 dark:hover:bg-gray-600 disabled:opacity-70"
+            >
+              <span className="text-xl">💾</span>
+              <div className="flex-1 text-left">
+                <p className="text-sm font-medium text-gray-800 dark:text-white">
+                  {caching ? `Сохраняем... ${cacheProgress}%` : 'Сохранить для офлайна'}
+                </p>
+                <p className="text-xs text-gray-400">{fileSizeMb} МБ • видео останется в браузере</p>
+              </div>
+              {!caching && <DownloadIcon />}
+            </button>
+          )}
+  
+          {caching && (
+            <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-1.5">
+              <div
+                className="bg-green-500 h-1.5 rounded-full transition-all duration-300"
+                style={{ width: `${cacheProgress}%` }}
+              />
+            </div>
+          )}
+  
+          <a
+            href={videoSrc}
+            download={videoFile.filename}
+            className="flex items-center gap-3 px-4 py-3 rounded-xl transition-colors cursor-pointer bg-green-50 hover:bg-green-100 dark:bg-gray-700 dark:hover:bg-gray-600"
+          >
+            <span className="text-xl">🎬</span>
+            <div className="flex-1">
+              <p className="text-sm font-medium text-gray-800 dark:text-white">Скачать на устройство</p>
+              <p className="text-xs text-gray-400">{fileSizeMb} МБ • MP4</p>
+            </div>
+            <DownloadIcon />
+          </a>
+  
+          <a
+            href={videoSrc}
+            download={videoFile.filename.replace('.mp4', '.mp3')}
+            className="flex items-center gap-3 px-4 py-3 rounded-xl transition-colors cursor-pointer bg-green-50 hover:bg-green-100 dark:bg-gray-700 dark:hover:bg-gray-600"
+          >
+            <span className="text-xl">🎵</span>
+            <div className="flex-1">
+              <p className="text-sm font-medium text-gray-800 dark:text-white">Скачать аудио</p>
+              <p className="text-xs text-gray-400">Только звук • MP3</p>
+            </div>
+            <DownloadIcon />
+          </a>
+  
+          <button
+            disabled
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl opacity-50 cursor-not-allowed bg-green-50 dark:bg-gray-700"
+          >
+            <span className="text-xl">📄</span>
+            <div className="flex-1 text-left">
+              <p className="text-sm font-medium text-gray-800 dark:text-white">Расшифровка текстом</p>
+              <p className="text-xs text-gray-400">Скоро будет доступно</p>
+            </div>
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+const QuizContent = () => (
+  <div className="rounded-2xl p-6 text-center
+    bg-white dark:bg-gray-800
+    border border-green-100 dark:border-gray-700"
+  >
+    <div className="text-4xl mb-3">🔒</div>
+    <p className="font-medium text-gray-700 dark:text-gray-300">
+      Тесты доступны только онлайн
+    </p>
+    <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
+      Подключитесь к интернету чтобы пройти тест
+    </p>
+  </div>
+)
+
+const UnsupportedContent = ({ module }: { module: CourseModule }) => (
+  <div className="rounded-2xl p-6 text-center
+    bg-white dark:bg-gray-800
+    border border-green-100 dark:border-gray-700"
+  >
+    <div className="text-4xl mb-3">📌</div>
+    <p className="font-medium text-gray-700 dark:text-gray-300">{module.name}</p>
+    <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
+      Этот тип контента пока не поддерживается
+    </p>
+  </div>
+)
+
+const getModuleType = (module: CourseModule) => {
+  if (module.modname === 'quiz') return 'quiz'
+  if (module.modname === 'page') {
+    const hasVideo = module.contents?.some(c => c.mimetype?.startsWith('video/'))
+    return hasVideo ? 'video' : 'page'
+  }
+  return 'unsupported'
+}
+
 export const LessonPage = () => {
-    return <div className="p-4"><h1 className="text-2xl font-bold">Лекция</h1></div>
+  const { courseId, moduleId } = useParams<{ courseId: string; moduleId: string }>()
+  const isOnline = useOfflineStatus()
+  const id = Number(courseId)
+  const modId = Number(moduleId)
+
+  const { data: sections, isLoading } = useQuery({
+    queryKey: ['course', id],
+    queryFn: () => getCourseContents(id),
+    enabled: isOnline,
+    retry: false,
+  })
+
+  const [module, setModule] = useState<CourseModule | null>(null)
+
+  useEffect(() => {
+    if (sections) {
+      for (const section of sections) {
+        const found = section.modules.find(m => m.id === modId)
+        if (found) { setModule(found); break }
+      }
+    }
+  }, [sections, modId])
+
+  useEffect(() => {
+    if (!isOnline) {
+      getOfflineCourse(id).then(course => {
+        if (!course) return
+        for (const section of course.sections) {
+          const found = section.modules.find(m => m.id === modId)
+          if (found) { setModule(found); break }
+        }
+      })
+    }
+  }, [id, modId, isOnline])
+
+  const renderContent = () => {
+    if (!module) return null
+    switch (getModuleType(module)) {
+      case 'page':  return <PageContent module={module} />
+      case 'video': return <VideoContent module={module} />
+      case 'quiz':  return <QuizContent />
+      default:      return <UnsupportedContent module={module} />
+    }
+  }
+
+  return (
+    <Layout title={module?.name ?? 'Лекция'} showBack>
+      <div className="space-y-4">
+        {isLoading && (
+          <div className="animate-pulse space-y-3">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="h-4 bg-gray-200 dark:bg-gray-700 rounded"/>
+            ))}
+          </div>
+        )}
+        {renderContent()}
+      </div>
+    </Layout>
+  )
 }
