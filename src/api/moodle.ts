@@ -1,4 +1,4 @@
-import { moodleClient, MOODLE_URL } from "./client";
+import { moodleClient } from "./client";
 import type { AuthToken, Course, CourseSection } from "../types";
 
 const WS = "/webservice/rest/server.php";

@@ -15,6 +15,8 @@ export interface Course {
 export interface CourseSection {
   id: number;
   name: string;
+  visible?: number;
+  summary?: string;
   modules: CourseModule[];
 }
 
@@ -22,7 +24,10 @@ export interface CourseModule {
   id: number;
   name: string;
   modname: string;
+  modicon?: string;
+  visible?: number;
   contents?: ModuleContent[];
+  description?: string;
 }
 
 export interface CourseOverviewFile {
@@ -36,6 +41,7 @@ export interface ModuleContent {
   fileurl: string;
   filesize: number;
   mimetype?: string;
+  timemodified?: number;
 }
 
 export interface OfflineCourse {
