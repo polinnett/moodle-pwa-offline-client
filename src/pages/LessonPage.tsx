@@ -187,14 +187,14 @@ const VideoContent = ({ module }: { module: CourseModule }) => {
         })
         const reader = response.body?.getReader()
         const contentLength = Number(response.headers.get('Content-Length') ?? videoFile.filesize)
-        const chunks: Uint8Array[] = []
+        const chunks: ArrayBuffer[] = []
         let received = 0
   
         if (reader) {
           while (true) {
             const { done, value } = await reader.read()
             if (done) break
-            chunks.push(value)
+            chunks.push(value.buffer.slice(value.byteOffset, value.byteOffset + value.byteLength))
             received += value.length
             setCacheProgress(Math.round((received / contentLength) * 100))
           }

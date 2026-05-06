@@ -1,7 +1,7 @@
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useState, useEffect } from 'react'
-import { getCourseContents, getMyCourses } from '../api/moodle'
+import { getCourseContents } from '../api/moodle'
 import { saveCourseOffline, getOfflineCourse, deleteOfflineCourse } from '../db'
 import { useOfflineStatus } from '../hooks/useOfflineStatus'
 import { Layout } from '../components/Layout'
