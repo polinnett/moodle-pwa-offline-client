@@ -55,3 +55,21 @@ export const getPageContent = async (moduleId: number): Promise<string> => {
   const page = pages.find((p) => p.coursemodule === moduleId);
   return page?.content ?? "";
 };
+
+export const transcribeVideo = async (videoUrl: string): Promise<string> => {
+  const response = await fetch(videoUrl);
+  const blob = await response.blob();
+
+  const formData = new FormData();
+  formData.append("file", blob, "video.mp4");
+
+  const result = await fetch("http://localhost:9000/transcribe", {
+    method: "POST",
+    body: formData,
+  });
+
+  if (!result.ok) throw new Error("Ошибка расшифровки");
+
+  const data = await result.json();
+  return data.text;
+};

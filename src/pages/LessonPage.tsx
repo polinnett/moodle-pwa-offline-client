@@ -6,6 +6,8 @@ import { saveLessonOffline, getOfflineLesson, deleteOfflineLesson, getOfflineCou
 import { useOfflineStatus } from '../hooks/useOfflineStatus'
 import { Layout } from '../components/Layout'
 import type { CourseModule } from '../types'
+import { jsPDF } from 'jspdf'
+import { transcribeVideo } from '../api/moodle'
 
 
 const proxyUrl = (url: string) =>
@@ -154,6 +156,176 @@ const PageContent = ({ module, courseId }: { module: CourseModule; courseId: num
   )
 }
 
+const TranscribeButton = ({ videoUrl, videoName }: { videoUrl: string; videoName: string }) => {
+  const [status, setStatus] = useState<'idle' | 'loading' | 'done' | 'error'>('idle')
+  const [text, setText] = useState('')
+
+  const handleTranscribe = async () => {
+    setStatus('loading')
+    try {
+      const result = await transcribeVideo(videoUrl)
+      setText(result)
+      setStatus('done')
+    } catch {
+      setStatus('error')
+    }
+  }
+
+  const handleSavePDF = () => {
+    const doc = new jsPDF()
+  
+    doc.setFont('helvetica')
+    doc.setFontSize(16)
+  
+    const printWindow = window.open('', '_blank')
+    if (!printWindow) return
+  
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <title>${videoName} — расшифровка</title>
+          <style>
+            body {
+              font-family: Arial, sans-serif;
+              max-width: 800px;
+              margin: 40px auto;
+              padding: 0 20px;
+              line-height: 1.6;
+              color: #111;
+            }
+            h1 {
+              font-size: 20px;
+              margin-bottom: 8px;
+              color: #15803d;
+            }
+            .meta {
+              font-size: 12px;
+              color: #888;
+              margin-bottom: 24px;
+            }
+            p {
+              font-size: 14px;
+              text-align: justify;
+            }
+          </style>
+        </head>
+        <body>
+          <h1>${videoName}</h1>
+          <div class="meta">Расшифровка видеолекции • Moodle PWA</div>
+          <p>${text.replace(/\n/g, '<br>')}</p>
+        </body>
+      </html>
+    `)
+  
+    printWindow.document.close()
+  
+    setTimeout(() => {
+      printWindow.print()
+      printWindow.close()
+    }, 500)
+  }
+
+  if (status === 'idle') {
+    return (
+      <button
+        onClick={handleTranscribe}
+        className="w-full flex items-center gap-3 px-4 py-3 rounded-xl
+          transition-colors cursor-pointer
+          bg-green-50 hover:bg-green-100 dark:bg-gray-700 dark:hover:bg-gray-600"
+      >
+        <span className="text-xl">📄</span>
+        <div className="flex-1 text-left">
+          <p className="text-sm font-medium text-gray-800 dark:text-white">
+            Расшифровка текстом
+          </p>
+          <p className="text-xs text-gray-400">Whisper AI • только онлайн</p>
+        </div>
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+          viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+          className="text-green-500 shrink-0">
+          <circle cx="12" cy="12" r="10"/>
+          <polygon points="10 8 16 12 10 16 10 8" fill="currentColor"/>
+        </svg>
+      </button>
+    )
+  }
+
+  if (status === 'loading') {
+    return (
+      <div className="px-4 py-3 rounded-xl bg-green-50 dark:bg-gray-700">
+        <div className="flex items-center gap-3 mb-2">
+          <span className="text-xl">⏳</span>
+          <div>
+            <p className="text-sm font-medium text-gray-800 dark:text-white">
+              Расшифровываем...
+            </p>
+            <p className="text-xs text-gray-400">
+              Это может занять 1-3 минуты
+            </p>
+          </div>
+        </div>
+        <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-1.5">
+          <div className="bg-green-500 h-1.5 rounded-full animate-pulse w-full"/>
+        </div>
+      </div>
+    )
+  }
+
+  if (status === 'error') {
+    return (
+      <button
+        onClick={handleTranscribe}
+        className="w-full flex items-center gap-3 px-4 py-3 rounded-xl
+          cursor-pointer bg-red-50 dark:bg-red-900/20"
+      >
+        <span className="text-xl">❌</span>
+        <div className="flex-1 text-left">
+          <p className="text-sm font-medium text-red-600 dark:text-red-400">
+            Ошибка расшифровки
+          </p>
+          <p className="text-xs text-gray-400">Нажмите чтобы попробовать снова</p>
+        </div>
+      </button>
+    )
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="px-4 py-3 rounded-xl bg-green-50 dark:bg-gray-700">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            <span className="text-xl">✅</span>
+            <p className="text-sm font-medium text-gray-800 dark:text-white">
+              Расшифровка готова
+            </p>
+          </div>
+          <button
+            onClick={handleSavePDF}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg
+              text-xs font-medium cursor-pointer transition-colors
+              bg-green-500 hover:bg-green-600 text-white"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12"
+              viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="7 10 12 15 17 10"/>
+              <line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            Скачать PDF
+          </button>
+        </div>
+        <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-3 leading-relaxed">
+          {text}
+        </p>
+      </div>
+    </div>
+  )
+}
+
 const VideoContent = ({ module }: { module: CourseModule }) => {
     const videoFile = module.contents?.find(c => c.mimetype === 'video/mp4')
     if (!videoFile) return null
@@ -292,17 +464,7 @@ const VideoContent = ({ module }: { module: CourseModule }) => {
             </div>
             <DownloadIcon />
           </a>
-  
-          <button
-            disabled
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl opacity-50 cursor-not-allowed bg-green-50 dark:bg-gray-700"
-          >
-            <span className="text-xl">📄</span>
-            <div className="flex-1 text-left">
-              <p className="text-sm font-medium text-gray-800 dark:text-white">Расшифровка текстом</p>
-              <p className="text-xs text-gray-400">Скоро будет доступно</p>
-            </div>
-          </button>
+          <TranscribeButton videoUrl={videoSrc} videoName={module.name} />
         </div>
       </div>
     )
