@@ -9,6 +9,7 @@ export interface Course {
   shortname: string;
   summary: string;
   courseimage?: string;
+  overviewfiles?: CourseOverviewFile[];
 }
 
 export interface CourseSection {
@@ -22,6 +23,11 @@ export interface CourseModule {
   name: string;
   modname: string;
   contents?: ModuleContent[];
+}
+
+export interface CourseOverviewFile {
+  fileurl: string;
+  mimetype: string;
 }
 
 export interface ModuleContent {
