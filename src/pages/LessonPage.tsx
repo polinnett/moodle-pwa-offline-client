@@ -1,13 +1,13 @@
 import { useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { getCourseContents } from '../api/moodle'
 import { saveLessonOffline, getOfflineLesson, deleteOfflineLesson, getOfflineCourse } from '../db'
 import { useOfflineStatus } from '../hooks/useOfflineStatus'
 import { Layout } from '../components/Layout'
 import type { CourseModule } from '../types'
 import { jsPDF } from 'jspdf'
-import { transcribeVideo } from '../api/moodle'
+import { transcribeVideo, extractAudio } from '../api/moodle'
 
 
 const proxyUrl = (url: string) =>
@@ -149,9 +149,16 @@ const PageContent = ({ module, courseId }: { module: CourseModule; courseId: num
           bg-white dark:bg-gray-800
           border border-green-100 dark:border-gray-700
           prose prose-green dark:prose-invert max-w-none
-          text-gray-800 dark:text-gray-200"
+          text-gray-800 dark:text-gray-200
+          [&_table]:w-full [&_table]:block [&_table]:overflow-x-auto
+          [&_td]:whitespace-nowrap [&_th]:whitespace-nowrap
+          [&_td]:px-3 [&_td]:py-2 [&_th]:px-3 [&_th]:py-2
+          [&_pre]:overflow-x-auto [&_pre]:whitespace-pre
+          [&_code]:break-all
+          overflow-hidden break-words"
         dangerouslySetInnerHTML={{ __html: html }}
       />
+
     </div>
   )
 }
@@ -159,16 +166,40 @@ const PageContent = ({ module, courseId }: { module: CourseModule; courseId: num
 const TranscribeButton = ({ videoUrl, videoName }: { videoUrl: string; videoName: string }) => {
   const [status, setStatus] = useState<'idle' | 'loading' | 'done' | 'error'>('idle')
   const [text, setText] = useState('')
+  const [elapsed, setElapsed] = useState(0)
+  const abortRef = useRef<AbortController | null>(null)
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const handleTranscribe = async () => {
     setStatus('loading')
+    setElapsed(0)
+  
+    timerRef.current = setInterval(() => {
+      setElapsed(prev => prev + 1)
+    }, 1000)
+  
+    abortRef.current = new AbortController()
+  
     try {
-      const result = await transcribeVideo(videoUrl)
+      const result = await transcribeVideo(videoUrl, abortRef.current.signal)
       setText(result)
       setStatus('done')
-    } catch {
-      setStatus('error')
+    } catch (err: unknown) {
+      if (err instanceof Error && err.name === 'AbortError') {
+        setStatus('idle')
+      } else {
+        setStatus('error')
+      }
+    } finally {
+      if (timerRef.current) clearInterval(timerRef.current)
     }
+  }
+  
+  const handleCancel = () => {
+    abortRef.current?.abort()
+    if (timerRef.current) clearInterval(timerRef.current)
+    setStatus('idle')
+    setElapsed(0)
   }
 
   const handleSavePDF = () => {
@@ -254,21 +285,43 @@ const TranscribeButton = ({ videoUrl, videoName }: { videoUrl: string; videoName
   }
 
   if (status === 'loading') {
+    const minutes = Math.floor(elapsed / 60)
+    const seconds = elapsed % 60
+    const timeStr = `${minutes}:${seconds.toString().padStart(2, '0')}`
+  
     return (
-      <div className="px-4 py-3 rounded-xl bg-green-50 dark:bg-gray-700">
-        <div className="flex items-center gap-3 mb-2">
-          <span className="text-xl">⏳</span>
-          <div>
-            <p className="text-sm font-medium text-gray-800 dark:text-white">
-              Расшифровываем...
-            </p>
-            <p className="text-xs text-gray-400">
-              Это может занять 1-3 минуты
-            </p>
+      <div className="px-4 py-3 rounded-xl bg-green-50 dark:bg-gray-700 space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <span className="text-xl">⏳</span>
+            <div>
+              <p className="text-sm font-medium text-gray-800 dark:text-white">
+                Расшифровываем... {timeStr}
+              </p>
+              <p className="text-xs text-gray-400">
+                Обычно занимает 1-3 минуты
+              </p>
+            </div>
           </div>
+          <button
+            onClick={handleCancel}
+            className="text-xs px-3 py-1.5 rounded-lg cursor-pointer
+              transition-colors font-medium
+              bg-red-100 text-red-600 hover:bg-red-200
+              dark:bg-red-900/30 dark:text-red-400"
+          >
+            Отменить
+          </button>
         </div>
-        <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-1.5">
-          <div className="bg-green-500 h-1.5 rounded-full animate-pulse w-full"/>
+  
+        <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-1.5 overflow-hidden">
+          <div className="h-1.5 rounded-full bg-green-500
+            animate-[progress_2s_ease-in-out_infinite]"
+            style={{
+              width: '40%',
+              animation: 'pulse-bar 1.5s ease-in-out infinite alternate',
+            }}
+          />
         </div>
       </div>
     )
@@ -327,148 +380,161 @@ const TranscribeButton = ({ videoUrl, videoName }: { videoUrl: string; videoName
 }
 
 const VideoContent = ({ module }: { module: CourseModule }) => {
-    const videoFile = module.contents?.find(c => c.mimetype === 'video/mp4')
-    if (!videoFile) return null
-  
-    const videoSrc = fileUrl(videoFile.fileurl)
-    const fileSizeMb = (videoFile.filesize / 1024 / 1024).toFixed(1)
-  
-    const [cachedUrl, setCachedUrl] = useState<string | null>(null)
-    const [caching, setCaching] = useState(false)
-    const [cacheProgress, setCacheProgress] = useState(0)
-  
-    useEffect(() => {
-      const checkCache = async () => {
-        const cache = await caches.open('moodle-videos')
-        const match = await cache.match(videoSrc)
-        if (match) {
-          const blob = await match.blob()
-          setCachedUrl(URL.createObjectURL(blob))
-        }
-      }
-      checkCache()
-    }, [videoSrc])
-  
-    const handleSaveOffline = async () => {
-      setCaching(true)
-      setCacheProgress(0)
-      try {
-        const token = localStorage.getItem('moodle_token')
-        const response = await fetch(videoSrc, {
-          headers: { Authorization: `Bearer ${token}` }
-        })
-        const reader = response.body?.getReader()
-        const contentLength = Number(response.headers.get('Content-Length') ?? videoFile.filesize)
-        const chunks: ArrayBuffer[] = []
-        let received = 0
-  
-        if (reader) {
-          while (true) {
-            const { done, value } = await reader.read()
-            if (done) break
-            chunks.push(value.buffer.slice(value.byteOffset, value.byteOffset + value.byteLength))
-            received += value.length
-            setCacheProgress(Math.round((received / contentLength) * 100))
-          }
-        }
-  
-        const blob = new Blob(chunks, { type: 'video/mp4' })
-        const cache = await caches.open('moodle-videos')
-        await cache.put(videoSrc, new Response(blob, {
-          headers: { 'Content-Type': 'video/mp4' }
-        }))
-        setCachedUrl(URL.createObjectURL(blob))
-      } finally {
-        setCaching(false)
-      }
-    }
-  
-    const handleDeleteCache = async () => {
+  const videoFile = module.contents?.find(c => c.mimetype === 'video/mp4')
+  if (!videoFile) return null
+
+  const videoSrc = fileUrl(videoFile.fileurl)
+  const fileSizeMb = (videoFile.filesize / 1024 / 1024).toFixed(1)
+
+  const [cachedUrl, setCachedUrl] = useState<string | null>(null)
+  const [caching, setCaching] = useState(false)
+  const [cacheProgress, setCacheProgress] = useState(0)
+  const [extractingAudio, setExtractingAudio] = useState(false)
+
+  useEffect(() => {
+    const checkCache = async () => {
       const cache = await caches.open('moodle-videos')
-      await cache.delete(videoSrc)
-      setCachedUrl(null)
+      const match = await cache.match(videoSrc)
+      if (match) {
+        const blob = await match.blob()
+        setCachedUrl(URL.createObjectURL(blob))
+      }
     }
-  
-    return (
-      <div className="space-y-4">
-        <div className="rounded-2xl overflow-hidden bg-black">
-          <video controls className="w-full max-h-72" src={cachedUrl ?? videoSrc}>
-            Ваш браузер не поддерживает видео
-          </video>
-        </div>
-  
-        <div className="rounded-2xl p-4 space-y-2 bg-white dark:bg-gray-800 border border-green-100 dark:border-gray-700">
-          <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-            Офлайн-доступ
-          </p>
-  
-          {cachedUrl ? (
-            <button
-              onClick={handleDeleteCache}
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors cursor-pointer bg-green-50 hover:bg-red-50 dark:bg-gray-700 dark:hover:bg-red-900/20"
-            >
-              <span className="text-xl">✅</span>
-              <div className="flex-1 text-left">
-                <p className="text-sm font-medium text-gray-800 dark:text-white">Сохранено офлайн</p>
-                <p className="text-xs text-gray-400">Нажмите чтобы удалить из кэша</p>
-              </div>
-            </button>
-          ) : (
-            <button
-              onClick={handleSaveOffline}
-              disabled={caching}
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors cursor-pointer bg-green-50 hover:bg-green-100 dark:bg-gray-700 dark:hover:bg-gray-600 disabled:opacity-70"
-            >
-              <span className="text-xl">💾</span>
-              <div className="flex-1 text-left">
-                <p className="text-sm font-medium text-gray-800 dark:text-white">
-                  {caching ? `Сохраняем... ${cacheProgress}%` : 'Сохранить для офлайна'}
-                </p>
-                <p className="text-xs text-gray-400">{fileSizeMb} МБ • видео останется в браузере</p>
-              </div>
-              {!caching && <DownloadIcon />}
-            </button>
-          )}
-  
-          {caching && (
-            <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-1.5">
-              <div
-                className="bg-green-500 h-1.5 rounded-full transition-all duration-300"
-                style={{ width: `${cacheProgress}%` }}
-              />
-            </div>
-          )}
-  
-          <a
-            href={videoSrc}
-            download={videoFile.filename}
-            className="flex items-center gap-3 px-4 py-3 rounded-xl transition-colors cursor-pointer bg-green-50 hover:bg-green-100 dark:bg-gray-700 dark:hover:bg-gray-600"
-          >
-            <span className="text-xl">🎬</span>
-            <div className="flex-1">
-              <p className="text-sm font-medium text-gray-800 dark:text-white">Скачать на устройство</p>
-              <p className="text-xs text-gray-400">{fileSizeMb} МБ • MP4</p>
-            </div>
-            <DownloadIcon />
-          </a>
-  
-          <a
-            href={videoSrc}
-            download={videoFile.filename.replace('.mp4', '.mp3')}
-            className="flex items-center gap-3 px-4 py-3 rounded-xl transition-colors cursor-pointer bg-green-50 hover:bg-green-100 dark:bg-gray-700 dark:hover:bg-gray-600"
-          >
-            <span className="text-xl">🎵</span>
-            <div className="flex-1">
-              <p className="text-sm font-medium text-gray-800 dark:text-white">Скачать аудио</p>
-              <p className="text-xs text-gray-400">Только звук • MP3</p>
-            </div>
-            <DownloadIcon />
-          </a>
-          <TranscribeButton videoUrl={videoSrc} videoName={module.name} />
-        </div>
-      </div>
-    )
+    checkCache()
+  }, [videoSrc])
+
+  const handleSaveOffline = async () => {
+    setCaching(true)
+    setCacheProgress(0)
+    try {
+      const token = localStorage.getItem('moodle_token')
+      const response = await fetch(videoSrc, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      const reader = response.body?.getReader()
+      const contentLength = Number(response.headers.get('Content-Length') ?? videoFile.filesize)
+      const chunks: ArrayBuffer[] = []
+      let received = 0
+
+      if (reader) {
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+          chunks.push(value.buffer.slice(value.byteOffset, value.byteOffset + value.byteLength))
+          received += value.length
+          setCacheProgress(Math.round((received / contentLength) * 100))
+        }
+      }
+
+      const blob = new Blob(chunks, { type: 'video/mp4' })
+      const cache = await caches.open('moodle-videos')
+      await cache.put(videoSrc, new Response(blob, {
+        headers: { 'Content-Type': 'video/mp4' }
+      }))
+      setCachedUrl(URL.createObjectURL(blob))
+    } finally {
+      setCaching(false)
+    }
   }
+
+  const handleDeleteCache = async () => {
+    const cache = await caches.open('moodle-videos')
+    await cache.delete(videoSrc)
+    setCachedUrl(null)
+  }
+
+  const handleExtractAudio = async () => {
+    setExtractingAudio(true)
+    try {
+      await extractAudio(videoSrc)
+    } finally {
+      setExtractingAudio(false)
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="rounded-2xl overflow-hidden bg-black">
+        <video controls className="w-full max-h-72" src={cachedUrl ?? videoSrc}>
+          Ваш браузер не поддерживает видео
+        </video>
+      </div>
+
+      <div className="rounded-2xl p-4 space-y-2 bg-white dark:bg-gray-800 border border-green-100 dark:border-gray-700">
+        <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+          Офлайн-доступ
+        </p>
+
+        {cachedUrl ? (
+          <button
+            onClick={handleDeleteCache}
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors cursor-pointer bg-green-50 hover:bg-red-50 dark:bg-gray-700 dark:hover:bg-red-900/20"
+          >
+            <span className="text-xl">✅</span>
+            <div className="flex-1 text-left">
+              <p className="text-sm font-medium text-gray-800 dark:text-white">Сохранено офлайн</p>
+              <p className="text-xs text-gray-400">Нажмите чтобы удалить из кэша</p>
+            </div>
+          </button>
+        ) : (
+          <button
+            onClick={handleSaveOffline}
+            disabled={caching}
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors cursor-pointer bg-green-50 hover:bg-green-100 dark:bg-gray-700 dark:hover:bg-gray-600 disabled:opacity-70"
+          >
+            <span className="text-xl">💾</span>
+            <div className="flex-1 text-left">
+              <p className="text-sm font-medium text-gray-800 dark:text-white">
+                {caching ? `Сохраняем... ${cacheProgress}%` : 'Сохранить для офлайна'}
+              </p>
+              <p className="text-xs text-gray-400">{fileSizeMb} МБ • видео останется в браузере</p>
+            </div>
+            {!caching && <DownloadIcon />}
+          </button>
+        )}
+
+        {caching && (
+          <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-1.5">
+            <div
+              className="bg-green-500 h-1.5 rounded-full transition-all duration-300"
+              style={{ width: `${cacheProgress}%` }}
+            />
+          </div>
+        )}
+
+        <a
+          href={videoSrc}
+          download={videoFile.filename}
+          className="flex items-center gap-3 px-4 py-3 rounded-xl transition-colors cursor-pointer bg-green-50 hover:bg-green-100 dark:bg-gray-700 dark:hover:bg-gray-600"
+        >
+          <span className="text-xl">🎬</span>
+          <div className="flex-1">
+            <p className="text-sm font-medium text-gray-800 dark:text-white">Скачать на устройство</p>
+            <p className="text-xs text-gray-400">{fileSizeMb} МБ • MP4</p>
+          </div>
+          <DownloadIcon />
+        </a>
+
+        <button
+          onClick={handleExtractAudio}
+          disabled={extractingAudio}
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors cursor-pointer bg-green-50 hover:bg-green-100 dark:bg-gray-700 dark:hover:bg-gray-600 disabled:opacity-50"
+        >
+          <span className="text-xl">🎵</span>
+          <div className="flex-1 text-left">
+            <p className="text-sm font-medium text-gray-800 dark:text-white">
+              {extractingAudio ? 'Извлекаем аудио...' : 'Скачать аудио'}
+            </p>
+            <p className="text-xs text-gray-400">Только звук • MP3</p>
+          </div>
+          {!extractingAudio && <DownloadIcon />}
+        </button>
+
+        <TranscribeButton videoUrl={videoSrc} videoName={module.name} />
+      </div>
+    </div>
+  )
+}
 
 const QuizContent = () => (
   <div className="rounded-2xl p-6 text-center

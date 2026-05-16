@@ -56,8 +56,11 @@ export const getPageContent = async (moduleId: number): Promise<string> => {
   return page?.content ?? "";
 };
 
-export const transcribeVideo = async (videoUrl: string): Promise<string> => {
-  const response = await fetch(videoUrl);
+export const transcribeVideo = async (
+  videoUrl: string,
+  signal?: AbortSignal
+): Promise<string> => {
+  const response = await fetch(videoUrl, { signal });
   const blob = await response.blob();
 
   const formData = new FormData();
@@ -66,10 +69,34 @@ export const transcribeVideo = async (videoUrl: string): Promise<string> => {
   const result = await fetch("http://localhost:9000/transcribe", {
     method: "POST",
     body: formData,
+    signal,
   });
 
   if (!result.ok) throw new Error("Ошибка расшифровки");
 
   const data = await result.json();
   return data.text;
+};
+
+export const extractAudio = async (videoUrl: string): Promise<void> => {
+  const response = await fetch(videoUrl);
+  const blob = await response.blob();
+
+  const formData = new FormData();
+  formData.append("file", blob, "video.mp4");
+
+  const result = await fetch("http://localhost:9000/extract-audio", {
+    method: "POST",
+    body: formData,
+  });
+
+  if (!result.ok) throw new Error("Ошибка извлечения аудио");
+
+  const audioBlob = await result.blob();
+  const url = URL.createObjectURL(audioBlob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "audio.mp3";
+  a.click();
+  URL.revokeObjectURL(url);
 };

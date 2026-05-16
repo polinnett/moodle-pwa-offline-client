@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+*, *::before, *::after {
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
@@ -13,4 +17,9 @@
   --color-primary-700: #15803d;
   --color-primary-800: #166534;
   --color-primary-900: #14532d;
+}
+
+@keyframes pulse-bar {
+  0%   { width: 40%; margin-left: 0%; }
+  100% { width: 40%; margin-left: 60%; }
 }
