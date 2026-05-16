@@ -23,3 +23,16 @@
   0%   { width: 40%; margin-left: 0%; }
   100% { width: 40%; margin-left: 60%; }
 }
+
+.quiz-content .info { display: none; }
+.quiz-content .ablock { margin-top: 12px; }
+.quiz-content .answer div { 
+  display: flex; 
+  align-items: center; 
+  padding: 8px;
+  border-radius: 8px;
+}
+.quiz-content .answer div:hover { background: rgba(34, 197, 94, 0.1); }
+.quiz-content .accesshide { display: none; }
+.quiz-content .questionflag { display: none; }
+.quiz-content .badge { display: none; }

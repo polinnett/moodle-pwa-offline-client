@@ -221,7 +221,11 @@ export const CourseDetailPage = () => {
   const displaySections = isOnline ? (sections ?? []) : offlineSections
 
   const handleModuleClick = (module: CourseModule) => {
-    navigate(`/courses/${id}/lessons/${module.id}`)
+    if (module.modname === 'quiz') {
+      navigate(`/courses/${id}/quiz/${module.id}`)
+    } else {
+      navigate(`/courses/${id}/lessons/${module.id}`)
+    }
   }
 
   return (

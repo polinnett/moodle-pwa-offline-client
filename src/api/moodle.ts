@@ -100,3 +100,101 @@ export const extractAudio = async (videoUrl: string): Promise<void> => {
   a.click();
   URL.revokeObjectURL(url);
 };
+
+export const getQuizzesByCourse = async (courseId: number) => {
+  const response = await ws("mod_quiz_get_quizzes_by_courses", {
+    "courseids[0]": courseId,
+  });
+  return response.data.quizzes;
+};
+
+export const getOrStartAttempt = async (quizId: number) => {
+  const token = localStorage.getItem("moodle_token");
+
+  const attemptsResp = await fetch(
+    `/moodle-api/webservice/rest/server.php?wstoken=${token}&wsfunction=mod_quiz_get_user_attempts&quizid=${quizId}&status=inprogress&moodlewsrestformat=json`
+  );
+  const attemptsData = await attemptsResp.json();
+  console.log("existing attempts:", attemptsData);
+
+  if (attemptsData.attempts && attemptsData.attempts.length > 0) {
+    return attemptsData.attempts[0];
+  }
+
+  const response = await fetch(`/moodle-api/webservice/rest/server.php`, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      wstoken: token ?? "",
+      wsfunction: "mod_quiz_start_attempt",
+      moodlewsrestformat: "json",
+      quizid: String(quizId),
+    }),
+  });
+  const data = await response.json();
+  console.log("new attempt:", data);
+  return data.attempt;
+};
+
+export const getAttemptData = async (attemptId: number, page: number = 0) => {
+  const response = await ws("mod_quiz_get_attempt_data", {
+    attemptid: attemptId,
+    page,
+  });
+  return response.data;
+};
+
+export const saveAttemptAnswers = async (
+  attemptId: number,
+  data: Record<string, string>
+) => {
+  const token = localStorage.getItem("moodle_token");
+  const params = new URLSearchParams({
+    wstoken: token ?? "",
+    wsfunction: "mod_quiz_save_attempt",
+    moodlewsrestformat: "json",
+    attemptid: String(attemptId),
+  });
+
+  let i = 0;
+  for (const [name, value] of Object.entries(data)) {
+    params.append(`data[${i}][name]`, name);
+    params.append(`data[${i}][value]`, value);
+    i++;
+  }
+
+  const response = await fetch("/moodle-api/webservice/rest/server.php", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: params,
+  });
+  const result = await response.json();
+  console.log("saveAttempt result:", result);
+  return result;
+};
+
+export const finishAttempt = async (attemptId: number) => {
+  const token = localStorage.getItem("moodle_token");
+  const response = await fetch("/moodle-api/webservice/rest/server.php", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      wstoken: token ?? "",
+      wsfunction: "mod_quiz_process_attempt",
+      moodlewsrestformat: "json",
+      attemptid: String(attemptId),
+      finishattempt: "1",
+      timeup: "0",
+    }),
+  });
+  const result = await response.json();
+  console.log("finishAttempt result:", result);
+  return result;
+};
+
+export const getAttemptReview = async (attemptId: number) => {
+  const response = await ws("mod_quiz_get_attempt_review", {
+    attemptid: attemptId,
+  });
+  return response.data;
+};
