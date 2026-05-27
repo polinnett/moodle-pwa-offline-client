@@ -111,16 +111,6 @@ export const getQuizzesByCourse = async (courseId: number) => {
 export const getOrStartAttempt = async (quizId: number) => {
   const token = localStorage.getItem("moodle_token");
 
-  const attemptsResp = await fetch(
-    `/moodle-api/webservice/rest/server.php?wstoken=${token}&wsfunction=mod_quiz_get_user_attempts&quizid=${quizId}&status=inprogress&moodlewsrestformat=json`
-  );
-  const attemptsData = await attemptsResp.json();
-  console.log("existing attempts:", attemptsData);
-
-  if (attemptsData.attempts && attemptsData.attempts.length > 0) {
-    return attemptsData.attempts[0];
-  }
-
   const response = await fetch(`/moodle-api/webservice/rest/server.php`, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -132,8 +122,23 @@ export const getOrStartAttempt = async (quizId: number) => {
     }),
   });
   const data = await response.json();
-  console.log("new attempt:", data);
-  return data.attempt;
+
+  if (data.attempt) return data.attempt;
+
+  if (data.errorcode === "attemptstillinprogress") {
+    const attemptsResp = await fetch(
+      `/moodle-api/webservice/rest/server.php?wstoken=${token}&wsfunction=mod_quiz_get_user_attempts&quizid=${quizId}&moodlewsrestformat=json`
+    );
+    const attemptsData = await attemptsResp.json();
+    console.log("all attempts:", attemptsData);
+
+    const inProgress = attemptsData.attempts?.find(
+      (a: { state: string }) => a.state === "inprogress"
+    );
+    if (inProgress) return inProgress;
+  }
+
+  throw new Error("Не удалось получить попытку");
 };
 
 export const getAttemptData = async (attemptId: number, page: number = 0) => {
@@ -193,8 +198,11 @@ export const finishAttempt = async (attemptId: number) => {
 };
 
 export const getAttemptReview = async (attemptId: number) => {
-  const response = await ws("mod_quiz_get_attempt_review", {
-    attemptid: attemptId,
-  });
-  return response.data;
+  const token = localStorage.getItem("moodle_token");
+  const response = await fetch(
+    `/moodle-api/webservice/rest/server.php?wstoken=${token}&wsfunction=mod_quiz_get_attempt_review&attemptid=${attemptId}&moodlewsrestformat=json`
+  );
+  const result = await response.json();
+  console.log("getAttemptReview raw:", JSON.stringify(result, null, 2));
+  return result;
 };
