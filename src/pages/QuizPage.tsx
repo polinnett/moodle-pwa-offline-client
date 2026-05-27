@@ -15,19 +15,6 @@ const cleanHtml = (html: string) =>
     .replace(/<script[\s\S]*?<\/script>/gi, '')
     .replace(/http:\/\/localhost:8000/g, '/moodle-api')
 
-const parseAnswers = (container: HTMLDivElement): Record<string, string> => {
-  const answers: Record<string, string> = {}
-  const inputs = container.querySelectorAll<HTMLInputElement>(
-    'input[type="radio"]:checked, input[type="text"], input[type="hidden"]'
-  )
-  inputs.forEach(input => {
-    if (input.name && !input.name.includes('flagged')) {
-      answers[input.name] = input.value
-    }
-  })
-  return answers
-}
-
 export const QuizPage = () => {
   const { courseId, moduleId } = useParams<{ courseId: string; moduleId: string }>()
   const id = Number(courseId)
@@ -56,20 +43,16 @@ export const QuizPage = () => {
     const init = async () => {
       try {
         const quizzes = await getQuizzesByCourse(id)
-        console.log('quizzes:', JSON.stringify(quizzes, null, 2))
-        console.log('moduleId из URL:', moduleId, typeof moduleId)
   
         const quiz = quizzes.find((q: { coursemodule: number; name: string }) =>
           q.coursemodule === Number(moduleId)
         )
-        console.log('найденный quiz:', quiz)
   
         if (!quiz) throw new Error('Тест не найден')
         setQuizName(quiz.name)
         setQuizData({ sumgrades: quiz.sumgrades, grade: quiz.grade })
   
         const attempt = await getOrStartAttempt(quiz.id)
-        console.log('attempt:', JSON.stringify(attempt, null, 2))
         setAttemptId(attempt.id)
   
         const data = await getAttemptData(attempt.id, 0)
@@ -82,53 +65,45 @@ export const QuizPage = () => {
     init()
   }, [id, moduleId])
 
-  useEffect(() => {
-    if (!containerRef.current || status !== 'quiz') return
-
-    const handleChange = () => {
-      if (containerRef.current) {
-        const parsed = parseAnswers(containerRef.current)
-        setAnswers(parsed)
-      }
-    }
-
-    containerRef.current.addEventListener('change', handleChange)
-    return () => containerRef.current?.removeEventListener('change', handleChange)
-  }, [status, questions])
-
   const handleSubmit = async () => {
     if (!attemptId) return
     setStatus('submitting')
     try {
       const submitData: Record<string, string> = {}
+      
+      Object.assign(submitData, answers)
   
       questions.forEach(q => {
-        const { seqName, seqValue, matchRows, isDdwtos, ddwtosData, isMatch } = parseQuestion(q.html)
-        if (seqName) submitData[seqName] = seqValue
+        const parser = new DOMParser()
+        const doc = parser.parseFromString(q.html, 'text/html')
+        const seqEl = doc.querySelector('input[name*="sequencecheck"]') as HTMLInputElement
+        if (seqEl?.name) submitData[seqEl.name] = seqEl.value
+      
+        const isMatch = !!doc.querySelector('select[name*="_sub"]')
+        const isDdwtos = !!doc.querySelector('.placeinput')
       
         if (isMatch) {
-          matchRows.forEach(row => {
-            submitData[row.fieldName] = answers[row.fieldName] ?? '0'
+          doc.querySelectorAll('select[name*="_sub"]').forEach(sel => {
+            const select = sel as HTMLSelectElement
+            if (!submitData[select.name]) submitData[select.name] = '0'
           })
-        } else if (isDdwtos && ddwtosData) {
-          submitData[ddwtosData.placeName] = answers[ddwtosData.placeName] ?? '0'
-        } else {
-          const { fieldName } = parseQuestion(q.html)
-          if (answers[fieldName]) submitData[fieldName] = answers[fieldName]
+        } else if (isDdwtos) {
+          const placeInput = doc.querySelector('.placeinput') as HTMLInputElement
+          if (placeInput?.name && !submitData[placeInput.name]) {
+            submitData[placeInput.name] = '0'
+          }
         }
       })
-    
+  
       await saveAttemptAnswers(attemptId, submitData)
       await finishAttempt(attemptId)
   
       const review = await getAttemptReview(attemptId)
-      console.log('review:', JSON.stringify(review, null, 2))
-
       const sumgrades = quizData?.sumgrades ?? 1
       const maxGrade = quizData?.grade ?? 10
       const earnedSumgrades = parseFloat(review.attempt?.sumgrades) || 0
       const earnedGrade = (earnedSumgrades / sumgrades) * maxGrade
-
+  
       setResult({
         grade: Math.round(earnedGrade * 100) / 100,
         maxgrade: maxGrade,
@@ -292,7 +267,9 @@ export const QuizPage = () => {
                   {!isMatch && !isDdwtos && opts.map(opt => (
                     <button
                       key={opt.value}
-                      onClick={() => setAnswers(prev => ({ ...prev, [fieldName]: opt.value }))}
+                      onClick={() => {
+                        setAnswers(prev => ({ ...prev, [fieldName]: opt.value }))
+                      }}
                       className={`w-full text-left flex items-center gap-3 px-4 py-3
                         rounded-xl border transition-colors cursor-pointer text-sm
                         ${currentAnswer === opt.value
@@ -325,7 +302,6 @@ export const QuizPage = () => {
                   defaultValue=""
                   onChange={e => {
                     const val = e.target.options[e.target.selectedIndex].value
-                    console.log('match onChange:', row.fieldName, '->', val)
                     setAnswers(prev => ({ ...prev, [row.fieldName]: val }))
                   }}
                   className="text-sm rounded-lg px-3 py-2 cursor-pointer
@@ -351,7 +327,6 @@ export const QuizPage = () => {
                     defaultValue=""
                     onChange={e => {
                       const val = e.target.options[e.target.selectedIndex].value
-                      console.log('selected index:', e.target.selectedIndex, 'value:', val)
                       setAnswers(prev => ({ ...prev, [placeName]: val }))
                     }}
                     className="w-full text-sm rounded-lg px-3 py-2 cursor-pointer
@@ -435,8 +410,6 @@ const parseQuestion = (html: string) => {
       el => el.textContent?.trim() ?? ''
     ).filter(Boolean),
   } : null
-
-  console.log('ddwtosData:', JSON.stringify(ddwtosData))
 
   const firstInput = doc.querySelector(
     '.answer input[type="radio"]:not(.sr-only)'
