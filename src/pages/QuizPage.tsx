@@ -9,6 +9,7 @@ import {
   getAttemptReview,
 } from '../api/moodle'
 import { Layout } from '../components/Layout'
+import { useOfflineStatus } from '../hooks/useOfflineStatus'
 
 const cleanHtml = (html: string) =>
   html
@@ -23,7 +24,7 @@ export const QuizPage = () => {
   const [attemptId, setAttemptId] = useState<number | null>(null)
   const [questions, setQuestions] = useState<{ slot: number; html: string; type: string }[]>([])
   const [answers, setAnswers] = useState<Record<string, string>>({})
-  const [status, setStatus] = useState<'loading' | 'quiz' | 'submitting' | 'result' | 'error'>('loading')
+  const [status, setStatus] = useState<'loading' | 'resume' | 'quiz' | 'submitting' | 'result' | 'error'>('loading')
   const [result, setResult] = useState<{
     grade: number
     maxgrade: number
@@ -32,7 +33,9 @@ export const QuizPage = () => {
     passmark?: number
   } | null>(null)
   const [quizName, setQuizName] = useState('Тест')
+  const [resumeTime, setResumeTime] = useState<string>('')
   const containerRef = useRef<HTMLDivElement>(null)
+  const isOnline = useOfflineStatus()
 
   const parsedQuestions = useMemo(() =>
     questions.map(q => ({ ...q, parsed: parseQuestion(q.html) })),
@@ -54,9 +57,15 @@ export const QuizPage = () => {
   
         const attempt = await getOrStartAttempt(quiz.id)
         setAttemptId(attempt.id)
-  
+
+        const startTime = new Date(attempt.timestart * 1000).toLocaleString('ru-RU')
+        setResumeTime(startTime)
+
         const data = await getAttemptData(attempt.id, 0)
         setQuestions(data.questions)
+
+        const isNew = attempt.timemodified === attempt.timestart
+        setStatus(isNew ? 'quiz' : 'resume')
         setStatus('quiz')
       } catch {
         setStatus('error')
@@ -97,6 +106,9 @@ export const QuizPage = () => {
   
       await saveAttemptAnswers(attemptId, submitData)
       await finishAttempt(attemptId)
+      const quizzes = await getQuizzesByCourse(id)
+      const quiz = quizzes.find((q: {coursemodule: number}) => q.coursemodule === Number(moduleId))
+      if (quiz) localStorage.removeItem(`quiz_attempt_${quiz.id}`)
   
       const review = await getAttemptReview(attemptId)
       const sumgrades = quizData?.sumgrades ?? 1
@@ -115,6 +127,49 @@ export const QuizPage = () => {
       console.error('ошибка submit:', e)
       setStatus('error')
     }
+  }
+
+  if (status === 'resume') {
+    return (
+      <Layout title={quizName} showBack>
+        <div className="rounded-2xl p-8
+          bg-white dark:bg-gray-800
+          border border-green-100 dark:border-gray-700"
+        >
+          <div className="text-center mb-6">
+            <div className="text-4xl mb-3">📝</div>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+              У вас есть незавершённая попытка
+            </h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Начата: {resumeTime}
+            </p>
+          </div>
+  
+          <div className="space-y-3">
+            <button
+              onClick={() => setStatus('quiz')}
+              className="w-full py-3 rounded-xl font-medium
+                bg-green-500 hover:bg-green-600 text-white
+                cursor-pointer transition-colors"
+            >
+              Продолжить попытку
+            </button>
+  
+            <button
+              onClick={() => window.history.back()}
+              className="w-full py-3 rounded-xl font-medium
+                border border-gray-200 dark:border-gray-600
+                text-gray-600 dark:text-gray-400
+                hover:bg-gray-50 dark:hover:bg-gray-700
+                cursor-pointer transition-colors"
+            >
+              Вернуться к курсу
+            </button>
+          </div>
+        </div>
+      </Layout>
+    )
   }
 
   if (status === 'loading') {
@@ -349,15 +404,37 @@ export const QuizPage = () => {
         })}
         </div>
 
+        {!isOnline && (
+          <div className="flex items-center gap-3 px-4 py-3 rounded-xl
+            bg-yellow-50 dark:bg-yellow-900/20
+            border border-yellow-200 dark:border-yellow-800"
+          >
+            <span className="text-xl">⚠️</span>
+            <div>
+              <p className="text-sm font-medium text-yellow-800 dark:text-yellow-300">
+                Нет подключения к интернету
+              </p>
+              <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-0.5">
+                Ответы не будут отправлены. Дождитесь восстановления соединения.
+              </p>
+            </div>
+          </div>
+        )}
+
         <button
           onClick={handleSubmit}
-          disabled={status === 'submitting'}
+          disabled={status === 'submitting' || !isOnline}
           className="w-full py-3 rounded-xl font-medium text-sm
             cursor-pointer transition-colors
             bg-green-500 hover:bg-green-600 text-white
             disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {status === 'submitting' ? 'Отправляем...' : 'Завершить тест'}
+          {status === 'submitting'
+            ? 'Отправляем...'
+            : !isOnline
+              ? 'Нет соединения'
+              : 'Завершить тест'
+          }
         </button>
 
       </div>

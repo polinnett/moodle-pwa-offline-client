@@ -111,7 +111,19 @@ export const getQuizzesByCourse = async (courseId: number) => {
 export const getOrStartAttempt = async (quizId: number) => {
   const token = localStorage.getItem("moodle_token");
 
-  const response = await fetch(`/moodle-api/webservice/rest/server.php`, {
+  const savedAttemptId = localStorage.getItem(`quiz_attempt_${quizId}`);
+  if (savedAttemptId) {
+    const checkResp = await fetch(
+      `/moodle-api/webservice/rest/server.php?wstoken=${token}&wsfunction=mod_quiz_get_attempt_data&attemptid=${savedAttemptId}&page=0&moodlewsrestformat=json`
+    );
+    const checkData = await checkResp.json();
+    if (checkData.attempt && checkData.attempt.state === "inprogress") {
+      return checkData.attempt;
+    }
+    localStorage.removeItem(`quiz_attempt_${quizId}`);
+  }
+
+  const response = await fetch("/moodle-api/webservice/rest/server.php", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
@@ -123,22 +135,12 @@ export const getOrStartAttempt = async (quizId: number) => {
   });
   const data = await response.json();
 
-  if (data.attempt) return data.attempt;
-
-  if (data.errorcode === "attemptstillinprogress") {
-    const attemptsResp = await fetch(
-      `/moodle-api/webservice/rest/server.php?wstoken=${token}&wsfunction=mod_quiz_get_user_attempts&quizid=${quizId}&moodlewsrestformat=json`
-    );
-    const attemptsData = await attemptsResp.json();
-    console.log("all attempts:", attemptsData);
-
-    const inProgress = attemptsData.attempts?.find(
-      (a: { state: string }) => a.state === "inprogress"
-    );
-    if (inProgress) return inProgress;
+  if (data.attempt) {
+    localStorage.setItem(`quiz_attempt_${quizId}`, String(data.attempt.id));
+    return data.attempt;
   }
 
-  throw new Error("Не удалось получить попытку");
+  throw new Error("Не удалось получить попытку. Попробуйте позже.");
 };
 
 export const getAttemptData = async (attemptId: number, page: number = 0) => {
@@ -174,7 +176,6 @@ export const saveAttemptAnswers = async (
     body: params,
   });
   const result = await response.json();
-  console.log("saveAttempt result:", result);
   return result;
 };
 
@@ -193,7 +194,6 @@ export const finishAttempt = async (attemptId: number) => {
     }),
   });
   const result = await response.json();
-  console.log("finishAttempt result:", result);
   return result;
 };
 
@@ -203,6 +203,5 @@ export const getAttemptReview = async (attemptId: number) => {
     `/moodle-api/webservice/rest/server.php?wstoken=${token}&wsfunction=mod_quiz_get_attempt_review&attemptid=${attemptId}&moodlewsrestformat=json`
   );
   const result = await response.json();
-  console.log("getAttemptReview raw:", JSON.stringify(result, null, 2));
   return result;
 };
