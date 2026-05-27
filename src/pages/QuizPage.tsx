@@ -117,10 +117,10 @@ export const QuizPage = () => {
       const earnedGrade = (earnedSumgrades / sumgrades) * maxGrade
   
       setResult({
-        grade: Math.round(earnedGrade * 100) / 100,
+        grade: parseFloat(earnedGrade.toFixed(2)),
         maxgrade: maxGrade,
-        earnedRaw: earnedSumgrades,
-        maxRaw: sumgrades,
+        earnedRaw: parseFloat(earnedSumgrades.toFixed(2)),
+        maxRaw: parseFloat(sumgrades.toFixed(2)),
       })
       setStatus('result')
     } catch (e) {
@@ -224,7 +224,7 @@ export const QuizPage = () => {
             >
               <span className="text-sm text-gray-500 dark:text-gray-400">Набрано баллов</span>
               <span className="font-semibold text-gray-900 dark:text-white">
-                {result.grade} / {result.maxgrade}
+                {result.grade.toFixed(2)} / {result.maxgrade.toFixed(2)}
               </span>
             </div>
 
@@ -233,7 +233,7 @@ export const QuizPage = () => {
             >
               <span className="text-sm text-gray-500 dark:text-gray-400">Правильных ответов</span>
               <span className="font-semibold text-gray-900 dark:text-white">
-                {result.earnedRaw} / {result.maxRaw}
+              {result.earnedRaw.toFixed(2)} / {result.maxRaw.toFixed(2)}
               </span>
             </div>
   
@@ -447,6 +447,7 @@ const parseQuestion = (html: string) => {
   const doc = parser.parseFromString(html, 'text/html')
 
   const qtextEl = doc.querySelector('.qtext')
+  qtextEl?.querySelectorAll('.accesshide').forEach(el => el.remove())
   const qtext = qtextEl?.innerHTML ?? ''
 
   const isMatch = !!doc.querySelector('select[name*="_sub"]')

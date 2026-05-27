@@ -74,11 +74,11 @@ const SectionBlock = ({
   return (
     <div className="rounded-2xl overflow-hidden
       bg-white dark:bg-gray-800
-      border border-green-100 dark:border-gray-700 shadow-sm"
+      border border-green-200 dark:border-gray-700 shadow-sm"
     >
       {section.name && section.name !== 'General' && (
-        <div className="px-4 py-3 border-b border-green-50 dark:border-gray-700
-          bg-green-50 dark:bg-gray-800"
+        <div className="px-4 py-3 border-b border-green-200 dark:border-gray-700
+          bg-white dark:bg-gray-800"
         >
           <h2 className="font-bold text-xl text-gray-700 dark:text-gray-300">
             {section.name}
@@ -86,7 +86,16 @@ const SectionBlock = ({
         </div>
       )}
 
-      <div className="divide-y divide-green-50 dark:divide-gray-700 p-1">
+      {section.summary && section.summary.replace(/<[^>]*>/g, '').trim() && (
+        <div
+          className="px-4 py-3 text-sm text-gray-800 dark:text-white
+            border-b border-green-200 dark:border-gray-700
+            leading-relaxed"
+          dangerouslySetInnerHTML={{ __html: section.summary }}
+        />
+      )}
+
+      <div className="divide-y divide-green-200 dark:divide-gray-700 p-1">
         {visibleModules.map(module => (
           <ModuleItem
             key={module.id}
@@ -246,7 +255,7 @@ export const CourseDetailPage = () => {
           <div className="space-y-3">
             {[1, 2, 3].map(i => (
               <div key={i} className="rounded-2xl p-4 bg-white dark:bg-gray-800
-                border border-green-100 dark:border-gray-700 animate-pulse"
+                border border-green-200 dark:border-gray-700 animate-pulse"
               >
                 <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/3 mb-3"/>
                 <div className="space-y-2">
