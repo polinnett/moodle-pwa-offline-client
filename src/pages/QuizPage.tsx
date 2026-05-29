@@ -11,10 +11,87 @@ import {
 import { Layout } from '../components/Layout'
 import { useOfflineStatus } from '../hooks/useOfflineStatus'
 
-const cleanHtml = (html: string) =>
-  html
-    .replace(/<script[\s\S]*?<\/script>/gi, '')
-    .replace(/http:\/\/localhost:8000/g, '/moodle-api')
+const parseQuestion = (html: string) => {
+  const parser = new DOMParser()
+  const doc = parser.parseFromString(html, 'text/html')
+
+  const qtextEl = doc.querySelector('.qtext')
+  qtextEl?.querySelectorAll('.accesshide').forEach(el => el.remove())
+  const qtext = qtextEl?.innerHTML ?? ''
+
+  const isMatch = !!doc.querySelector('select[name*="_sub"]')
+  const isDdwtos = !!doc.querySelector('.placeinput')
+
+  const answers: { value: string; label: string }[] = []
+  doc.querySelectorAll('.answer input[type="radio"]').forEach(input => {
+    const inp = input as HTMLInputElement
+    if (inp.classList.contains('sr-only') || inp.value === '-1') return
+    const ariaId = inp.getAttribute('aria-labelledby')
+    const ariaEl = ariaId ? doc.getElementById(ariaId) : null
+    const flexFill = ariaEl?.querySelector('.flex-fill')
+    const labelEl = doc.querySelector(`label[for="${inp.id}"]`)
+    const label =
+      flexFill?.textContent?.trim() ||
+      ariaEl?.textContent?.trim() ||
+      labelEl?.textContent?.trim() ||
+      inp.value
+    answers.push({ value: inp.value, label })
+  })
+
+  const isCheckbox = !!doc.querySelector('.answer input[type="checkbox"]')
+  const checkboxOptions: { name: string; label: string }[] = []
+  if (isCheckbox) {
+    doc.querySelectorAll('.answer input[type="checkbox"]').forEach(input => {
+      const inp = input as HTMLInputElement
+      const ariaId = inp.getAttribute('aria-labelledby')
+      const ariaEl = ariaId ? doc.getElementById(ariaId) : null
+      const flexFill = ariaEl?.querySelector('.flex-fill')
+      const labelEl = doc.querySelector(`label[for="${inp.id}"]`)
+      const label =
+        flexFill?.textContent?.trim() ||
+        ariaEl?.textContent?.trim() ||
+        labelEl?.textContent?.trim() ||
+        inp.name
+      checkboxOptions.push({ name: inp.name, label })
+    })
+  }
+
+  const isShortAnswer = !!doc.querySelector('input[type="text"][name*="_answer"]')
+  const shortAnswerName = isShortAnswer
+    ? (doc.querySelector('input[type="text"][name*="_answer"]') as HTMLInputElement)?.name ?? ''
+    : ''
+
+  const matchRows: { stem: string; fieldName: string; options: { value: string; label: string }[] }[] = []
+  if (isMatch) {
+    doc.querySelectorAll('select[name*="_sub"]').forEach(sel => {
+      const select = sel as HTMLSelectElement
+      const row = select.closest('tr')
+      const stem = row?.querySelector('.text')?.textContent?.trim() ?? ''
+      const options = Array.from(select.options)
+        .filter(o => o.value !== '0')
+        .map(o => ({ value: o.value, label: o.text }))
+      matchRows.push({ stem, fieldName: select.name, options })
+    })
+  }
+
+  const ddwtosData: { placeName: string; choices: string[] } | null = isDdwtos ? {
+    placeName: (doc.querySelector('.placeinput') as HTMLInputElement)?.name ?? '',
+    choices: Array.from(doc.querySelectorAll('.draghome')).map(
+      el => el.textContent?.trim() ?? ''
+    ).filter(Boolean),
+  } : null
+
+  const firstInput = doc.querySelector(
+    '.answer input[type="radio"]:not(.sr-only)'
+  ) as HTMLInputElement
+  const fieldName = firstInput?.name ?? ''
+
+  const seqEl = doc.querySelector('input[name*="sequencecheck"]') as HTMLInputElement
+  const seqName = seqEl?.name ?? ''
+  const seqValue = seqEl?.value ?? '1'
+  
+  return { qtext, answers, fieldName, seqName, seqValue, matchRows, ddwtosData, isMatch, isDdwtos, isCheckbox, checkboxOptions, isShortAnswer, shortAnswerName }
+}
 
 export const QuizPage = () => {
   const { courseId, moduleId } = useParams<{ courseId: string; moduleId: string }>()
@@ -36,6 +113,8 @@ export const QuizPage = () => {
   const [resumeTime, setResumeTime] = useState<string>('')
   const containerRef = useRef<HTMLDivElement>(null)
   const isOnline = useOfflineStatus()
+  const [currentPage, setCurrentPage] = useState(0)
+  const [nextPage, setNextPage] = useState(-1)
 
   const parsedQuestions = useMemo(() =>
     questions.map(q => ({ ...q, parsed: parseQuestion(q.html) })),
@@ -46,15 +125,15 @@ export const QuizPage = () => {
     const init = async () => {
       try {
         const quizzes = await getQuizzesByCourse(id)
-  
+
         const quiz = quizzes.find((q: { coursemodule: number; name: string }) =>
           q.coursemodule === Number(moduleId)
         )
-  
+
         if (!quiz) throw new Error('Тест не найден')
         setQuizName(quiz.name)
         setQuizData({ sumgrades: quiz.sumgrades, grade: quiz.grade })
-  
+
         const attempt = await getOrStartAttempt(quiz.id)
         setAttemptId(attempt.id)
 
@@ -63,10 +142,10 @@ export const QuizPage = () => {
 
         const data = await getAttemptData(attempt.id, 0)
         setQuestions(data.questions)
+        setNextPage(data.nextpage)
 
         const isNew = attempt.timemodified === attempt.timestart
         setStatus(isNew ? 'quiz' : 'resume')
-        setStatus('quiz')
       } catch {
         setStatus('error')
       }
@@ -74,23 +153,51 @@ export const QuizPage = () => {
     init()
   }, [id, moduleId])
 
-  const handleSubmit = async () => {
-    if (!attemptId) return
-    setStatus('submitting')
+  const handleNextPage = async () => {
+    if (!attemptId || nextPage === -1) return
     try {
       const submitData: Record<string, string> = {}
-      
       Object.assign(submitData, answers)
-  
       questions.forEach(q => {
         const parser = new DOMParser()
         const doc = parser.parseFromString(q.html, 'text/html')
         const seqEl = doc.querySelector('input[name*="sequencecheck"]') as HTMLInputElement
         if (seqEl?.name) submitData[seqEl.name] = seqEl.value
-      
+      })
+      await saveAttemptAnswers(attemptId, submitData)
+
+      const data = await getAttemptData(attemptId, nextPage)
+      setQuestions(data.questions)
+      setNextPage(data.nextpage)
+      setCurrentPage(nextPage)
+      setAnswers({})
+      window.scrollTo(0, 0)
+    } catch (e) {
+      console.error('ошибка перехода на следующую страницу:', e)
+    }
+  }
+
+  const handleSubmit = async () => {
+    if (!attemptId) return
+    setStatus('submitting')
+    try {
+      const submitData: Record<string, string> = {}
+      Object.assign(submitData, answers)
+
+      questions.forEach(q => {
+        const parser = new DOMParser()
+        const doc = parser.parseFromString(q.html, 'text/html')
+        const seqEl = doc.querySelector('input[name*="sequencecheck"]') as HTMLInputElement
+        if (seqEl?.name) submitData[seqEl.name] = seqEl.value
+
+        const checkboxInputs = doc.querySelectorAll<HTMLInputElement>('.answer input[type="hidden"][name*="_choice"]')
+        checkboxInputs.forEach(inp => {
+          if (!submitData[inp.name]) submitData[inp.name] = '0'
+        })
+
         const isMatch = !!doc.querySelector('select[name*="_sub"]')
         const isDdwtos = !!doc.querySelector('.placeinput')
-      
+
         if (isMatch) {
           doc.querySelectorAll('select[name*="_sub"]').forEach(sel => {
             const select = sel as HTMLSelectElement
@@ -103,19 +210,20 @@ export const QuizPage = () => {
           }
         }
       })
-  
+
       await saveAttemptAnswers(attemptId, submitData)
       await finishAttempt(attemptId)
+
       const quizzes = await getQuizzesByCourse(id)
-      const quiz = quizzes.find((q: {coursemodule: number}) => q.coursemodule === Number(moduleId))
+      const quiz = quizzes.find((q: { coursemodule: number }) => q.coursemodule === Number(moduleId))
       if (quiz) localStorage.removeItem(`quiz_attempt_${quiz.id}`)
-  
+
       const review = await getAttemptReview(attemptId)
       const sumgrades = quizData?.sumgrades ?? 1
       const maxGrade = quizData?.grade ?? 10
       const earnedSumgrades = parseFloat(review.attempt?.sumgrades) || 0
       const earnedGrade = (earnedSumgrades / sumgrades) * maxGrade
-  
+
       setResult({
         grade: parseFloat(earnedGrade.toFixed(2)),
         maxgrade: maxGrade,
@@ -139,13 +247,12 @@ export const QuizPage = () => {
           <div className="text-center mb-6">
             <div className="text-4xl mb-3">📝</div>
             <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-              У вас есть незавершённая попытка
+              У вас есть незавершенная попытка
             </h2>
             <p className="text-sm text-gray-500 dark:text-gray-400">
               Начата: {resumeTime}
             </p>
           </div>
-  
           <div className="space-y-3">
             <button
               onClick={() => setStatus('quiz')}
@@ -155,7 +262,6 @@ export const QuizPage = () => {
             >
               Продолжить попытку
             </button>
-  
             <button
               onClick={() => window.history.back()}
               className="w-full py-3 rounded-xl font-medium
@@ -207,7 +313,7 @@ export const QuizPage = () => {
     const gradeNum = parseFloat(String(result.grade)) || 0
     const maxNum = parseFloat(String(result.maxgrade)) || 0
     const percent = maxNum > 0 ? Math.round((gradeNum / maxNum) * 100) : 0
-  
+
     return (
       <Layout title={quizName} showBack>
         <div className="rounded-2xl p-8
@@ -217,7 +323,6 @@ export const QuizPage = () => {
           <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6">
             Результаты теста
           </h2>
-  
           <div className="space-y-3 mb-6">
             <div className="flex justify-between items-center
               py-3 border-b border-gray-100 dark:border-gray-700"
@@ -227,16 +332,14 @@ export const QuizPage = () => {
                 {result.grade.toFixed(2)} / {result.maxgrade.toFixed(2)}
               </span>
             </div>
-
             <div className="flex justify-between items-center
               py-3 border-b border-gray-100 dark:border-gray-700"
             >
               <span className="text-sm text-gray-500 dark:text-gray-400">Правильных ответов</span>
               <span className="font-semibold text-gray-900 dark:text-white">
-              {result.earnedRaw.toFixed(2)} / {result.maxRaw.toFixed(2)}
+                {result.earnedRaw.toFixed(2)} / {result.maxRaw.toFixed(2)}
               </span>
             </div>
-  
             <div className="flex justify-between items-center
               py-3 border-b border-gray-100 dark:border-gray-700"
             >
@@ -245,18 +348,6 @@ export const QuizPage = () => {
                 {percent}%
               </span>
             </div>
-  
-            {result.passmark && (
-              <div className="flex justify-between items-center
-                py-3 border-b border-gray-100 dark:border-gray-700"
-              >
-                <span className="text-sm text-gray-500 dark:text-gray-400">Порог прохождения</span>
-                <span className="font-semibold text-gray-900 dark:text-white">
-                  {result.passmark}%
-                </span>
-              </div>
-            )}
-  
             <div className="flex justify-between items-center py-3">
               <span className="text-sm text-gray-500 dark:text-gray-400">Статус</span>
               <span className={`text-sm font-medium px-3 py-1 rounded-full
@@ -269,7 +360,6 @@ export const QuizPage = () => {
               </span>
             </div>
           </div>
-  
           <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2 mb-6">
             <div
               className={`h-2 rounded-full transition-all duration-500
@@ -277,7 +367,6 @@ export const QuizPage = () => {
               style={{ width: `${percent}%` }}
             />
           </div>
-  
           <button
             onClick={() => window.history.back()}
             className="w-full py-3 rounded-xl font-medium
@@ -294,12 +383,11 @@ export const QuizPage = () => {
   return (
     <Layout title={quizName} showBack>
       <div className="space-y-4">
-
-      <div ref={containerRef} className="space-y-4">
-        {parsedQuestions.map((q, idx) => {
-            const { qtext, answers: opts, fieldName, matchRows, ddwtosData, isMatch, isDdwtos } = q.parsed
+        <div ref={containerRef} className="space-y-4">
+          {parsedQuestions.map((q, idx) => {
+            const { qtext, answers: opts, fieldName, matchRows, ddwtosData, isMatch, isDdwtos, isCheckbox, checkboxOptions, isShortAnswer, shortAnswerName } = q.parsed
             const currentAnswer = answers[fieldName]
-            
+
             return (
               <div key={q.slot} className="rounded-2xl overflow-hidden
                 bg-white dark:bg-gray-800
@@ -309,22 +397,20 @@ export const QuizPage = () => {
                   border-b border-green-100 dark:border-gray-700"
                 >
                   <span className="text-xs font-medium text-green-700 dark:text-green-400">
-                    Вопрос {idx + 1}
+                    Вопрос {currentPage * 2 + idx + 1}
                   </span>
                 </div>
-            
+
                 <div className="px-4 pt-4 pb-2
                   text-sm font-medium text-gray-800 dark:text-gray-200"
                   dangerouslySetInnerHTML={{ __html: qtext }}
                 />
-            
+
                 <div className="px-4 pb-4 space-y-2">
                   {!isMatch && !isDdwtos && opts.map(opt => (
                     <button
                       key={opt.value}
-                      onClick={() => {
-                        setAnswers(prev => ({ ...prev, [fieldName]: opt.value }))
-                      }}
+                      onClick={() => setAnswers(prev => ({ ...prev, [fieldName]: opt.value }))}
                       className={`w-full text-left flex items-center gap-3 px-4 py-3
                         rounded-xl border transition-colors cursor-pointer text-sm
                         ${currentAnswer === opt.value
@@ -345,63 +431,108 @@ export const QuizPage = () => {
                       <span dangerouslySetInnerHTML={{ __html: opt.label }}/>
                     </button>
                   ))}
-            
-            {isMatch && matchRows.map(row => (
-              <div key={row.fieldName} className="flex items-center gap-3
-                px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-600"
-              >
-                <span className="flex-1 text-sm text-gray-700 dark:text-gray-300"
-                  dangerouslySetInnerHTML={{ __html: row.stem }}
-                />
-                <select
-                  defaultValue=""
-                  onChange={e => {
-                    const val = e.target.options[e.target.selectedIndex].value
-                    setAnswers(prev => ({ ...prev, [row.fieldName]: val }))
-                  }}
-                  className="text-sm rounded-lg px-3 py-2 cursor-pointer
-                    border border-gray-200 dark:border-gray-600
-                    bg-white dark:bg-gray-700
-                    text-gray-800 dark:text-gray-200
-                    focus:border-green-500 outline-none"
-                >
-                  <option value="">Выберите...</option>
-                  {row.options.map(o => (
-                    <option key={o.value} value={o.value}>{o.label}</option>
+
+                  {isCheckbox && checkboxOptions.map(opt => (
+                    <button
+                      key={opt.name}
+                      onClick={() => setAnswers(prev => ({
+                        ...prev,
+                        [opt.name]: prev[opt.name] === '1' ? '0' : '1'
+                      }))}
+                      className={`w-full text-left flex items-center gap-3 px-4 py-3
+                        rounded-xl border transition-colors cursor-pointer text-sm
+                        ${answers[opt.name] === '1'
+                          ? 'border-green-500 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300'
+                          : 'border-gray-200 dark:border-gray-600 hover:border-green-300 dark:hover:border-green-700 text-gray-700 dark:text-gray-300'
+                        }`}
+                    >
+                      <div className={`w-4 h-4 rounded border-2 shrink-0 transition-colors
+                        ${answers[opt.name] === '1'
+                          ? 'border-green-500 bg-green-500'
+                          : 'border-gray-300 dark:border-gray-600'
+                        }`}
+                      >
+                        {answers[opt.name] === '1' && (
+                          <svg viewBox="0 0 10 10" className="w-full h-full text-white p-0.5">
+                            <polyline points="1,5 4,8 9,2" fill="none" stroke="currentColor" strokeWidth="2"/>
+                          </svg>
+                        )}
+                      </div>
+                      <span dangerouslySetInnerHTML={{ __html: opt.label }}/>
+                    </button>
                   ))}
-                </select>
-              </div>
-            ))}
-            
-            {isDdwtos && ddwtosData && (() => {
-              const placeName = ddwtosData.placeName
-              return (
-                <div className="px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-600">
-                  <p className="text-xs text-gray-400 mb-2">Выберите вариант:</p>
-                  <select
-                    defaultValue=""
-                    onChange={e => {
-                      const val = e.target.options[e.target.selectedIndex].value
-                      setAnswers(prev => ({ ...prev, [placeName]: val }))
-                    }}
-                    className="w-full text-sm rounded-lg px-3 py-2 cursor-pointer
-                      border border-gray-200 dark:border-gray-600
-                      bg-white dark:bg-gray-700
-                      text-gray-800 dark:text-gray-200
-                      focus:border-green-500 outline-none"
-                  >
-                    <option value="">Выберите...</option>
-                    {ddwtosData.choices.map((c, i) => (
-                      <option key={i} value={String(i + 1)}>{c}</option>
-                    ))}
-                  </select>
-                </div>
-              )
-            })()}
+
+                  {isShortAnswer && (
+                    <input
+                      type="text"
+                      placeholder="Введите ответ..."
+                      value={answers[shortAnswerName] ?? ''}
+                      onChange={e => setAnswers(prev => ({ ...prev, [shortAnswerName]: e.target.value }))}
+                      className="w-full px-4 py-2.5 rounded-xl border outline-none
+                        transition-colors text-sm
+                        border-gray-200 bg-gray-50 text-gray-900
+                        focus:border-green-500 focus:ring-2 focus:ring-green-200
+                        dark:border-gray-600 dark:bg-gray-700 dark:text-white
+                        dark:focus:border-green-400 dark:focus:ring-green-900"
+                    />
+                  )}
+
+                  {isMatch && matchRows.map(row => (
+                    <div key={row.fieldName} className="flex items-center gap-3
+                      px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-600"
+                    >
+                      <span className="flex-1 text-sm text-gray-700 dark:text-gray-300"
+                        dangerouslySetInnerHTML={{ __html: row.stem }}
+                      />
+                      <select
+                        defaultValue=""
+                        onChange={e => {
+                          const val = e.target.options[e.target.selectedIndex].value
+                          setAnswers(prev => ({ ...prev, [row.fieldName]: val }))
+                        }}
+                        className="text-sm rounded-lg px-3 py-2 cursor-pointer
+                          border border-gray-200 dark:border-gray-600
+                          bg-white dark:bg-gray-700
+                          text-gray-800 dark:text-gray-200
+                          focus:border-green-500 outline-none"
+                      >
+                        <option value="">Выберите...</option>
+                        {row.options.map(o => (
+                          <option key={o.value} value={o.value}>{o.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                  ))}
+
+                  {isDdwtos && ddwtosData && (() => {
+                    const placeName = ddwtosData.placeName
+                    return (
+                      <div className="px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-600">
+                        <p className="text-xs text-gray-400 mb-2">Выберите вариант:</p>
+                        <select
+                          defaultValue=""
+                          onChange={e => {
+                            const val = e.target.options[e.target.selectedIndex].value
+                            setAnswers(prev => ({ ...prev, [placeName]: val }))
+                          }}
+                          className="w-full text-sm rounded-lg px-3 py-2 cursor-pointer
+                            border border-gray-200 dark:border-gray-600
+                            bg-white dark:bg-gray-700
+                            text-gray-800 dark:text-gray-200
+                            focus:border-green-500 outline-none"
+                        >
+                          <option value="">Выберите...</option>
+                          {ddwtosData.choices.map((c, i) => (
+                            <option key={i} value={String(i + 1)}>{c}</option>
+                          ))}
+                        </select>
+                      </div>
+                    )
+                  })()}
                 </div>
               </div>
             )
-        })}
+          })}
         </div>
 
         {!isOnline && (
@@ -421,83 +552,35 @@ export const QuizPage = () => {
           </div>
         )}
 
-        <button
-          onClick={handleSubmit}
-          disabled={status === 'submitting' || !isOnline}
-          className="w-full py-3 rounded-xl font-medium text-sm
-            cursor-pointer transition-colors
-            bg-green-500 hover:bg-green-600 text-white
-            disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {status === 'submitting'
-            ? 'Отправляем...'
-            : !isOnline
-              ? 'Нет соединения'
-              : 'Завершить тест'
-          }
-        </button>
-
+        <div className="flex gap-3">
+          {nextPage !== -1 ? (
+            <button
+              onClick={handleNextPage}
+              className="flex-1 py-3 rounded-xl font-medium text-sm
+                cursor-pointer transition-colors
+                bg-green-500 hover:bg-green-600 text-white"
+            >
+              Следующая страница
+            </button>
+          ) : (
+            <button
+              onClick={handleSubmit}
+              disabled={status === 'submitting' || !isOnline}
+              className="flex-1 py-3 rounded-xl font-medium text-sm
+                cursor-pointer transition-colors
+                bg-green-500 hover:bg-green-600 text-white
+                disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {status === 'submitting'
+                ? 'Отправляем...'
+                : !isOnline
+                  ? 'Нет соединения'
+                  : 'Завершить тест'
+              }
+            </button>
+          )}
+        </div>
       </div>
     </Layout>
   )
 }
-
-const parseQuestion = (html: string) => {
-  const parser = new DOMParser()
-  const doc = parser.parseFromString(html, 'text/html')
-
-  const qtextEl = doc.querySelector('.qtext')
-  qtextEl?.querySelectorAll('.accesshide').forEach(el => el.remove())
-  const qtext = qtextEl?.innerHTML ?? ''
-
-  const isMatch = !!doc.querySelector('select[name*="_sub"]')
-  const isDdwtos = !!doc.querySelector('.placeinput')
-
-  const answers: { value: string; label: string }[] = []
-  doc.querySelectorAll('.answer input[type="radio"]').forEach(input => {
-    const inp = input as HTMLInputElement
-    if (inp.classList.contains('sr-only') || inp.value === '-1') return
-    const ariaId = inp.getAttribute('aria-labelledby')
-    const ariaEl = ariaId ? doc.getElementById(ariaId) : null
-    const flexFill = ariaEl?.querySelector('.flex-fill')
-    const labelEl = doc.querySelector(`label[for="${inp.id}"]`)
-    const label =
-      flexFill?.textContent?.trim() ||
-      ariaEl?.textContent?.trim() ||
-      labelEl?.textContent?.trim() ||
-      inp.value
-    answers.push({ value: inp.value, label })
-  })
-
-  const matchRows: { stem: string; fieldName: string; options: { value: string; label: string }[] }[] = []
-  if (isMatch) {
-    doc.querySelectorAll('select[name*="_sub"]').forEach(sel => {
-      const select = sel as HTMLSelectElement
-      const row = select.closest('tr')
-      const stem = row?.querySelector('.text')?.textContent?.trim() ?? ''
-      const options = Array.from(select.options)
-        .filter(o => o.value !== '0')
-        .map(o => ({ value: o.value, label: o.text }))
-      matchRows.push({ stem, fieldName: select.name, options })
-    })
-  }
-
-  const ddwtosData: { placeName: string; choices: string[] } | null = isDdwtos ? {
-    placeName: (doc.querySelector('.placeinput') as HTMLInputElement)?.name ?? '',
-    choices: Array.from(doc.querySelectorAll('.draghome')).map(
-      el => el.textContent?.trim() ?? ''
-    ).filter(Boolean),
-  } : null
-
-  const firstInput = doc.querySelector(
-    '.answer input[type="radio"]:not(.sr-only)'
-  ) as HTMLInputElement
-  const fieldName = firstInput?.name ?? ''
-
-  const seqEl = doc.querySelector('input[name*="sequencecheck"]') as HTMLInputElement
-  const seqName = seqEl?.name ?? ''
-  const seqValue = seqEl?.value ?? '1'
-
-  return { qtext, answers, fieldName, seqName, seqValue, matchRows, ddwtosData, isMatch, isDdwtos }
-}
-

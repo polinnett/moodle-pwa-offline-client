@@ -31,9 +31,12 @@ const ModuleItem = ({
 }) => {
   if (module.modname === 'label') {
     return (
-      <div className="px-3 py-1 text-xs text-gray-400 dark:text-gray-500"
+      <div
+        className="px-4 py-3 text-sm text-gray-800 dark:text-white
+          leading-relaxed border-b border-green-200 dark:border-gray-700
+          last:border-b-0"
         dangerouslySetInnerHTML={{
-          __html: module.description?.replace(/<[^>]*>/g, '') ?? module.name
+          __html: module.description ?? module.name
         }}
       />
     )
