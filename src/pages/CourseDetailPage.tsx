@@ -178,8 +178,7 @@ const DownloadButton = ({
           dark:hover:bg-red-900/30 dark:hover:text-red-400
           disabled:opacity-50"
       >
-        <span>✓</span>
-        <span>{loading ? 'Удаляем...' : 'Скачан офлайн — удалить'}</span>
+        <span>{loading ? 'Удаляем...' : 'Удалить'}</span>
       </button>
     )
   }

@@ -9,6 +9,7 @@ import type { CourseModule } from '../types'
 import { jsPDF } from 'jspdf'
 import { transcribeVideo, extractAudio } from '../api/moodle'
 import { Icon } from '../components/Icon'
+import { DownloadIcon } from '../components/DownloadIcon'
 
 
 const proxyUrl = (url: string) =>
@@ -18,18 +19,6 @@ const fileUrl = (url: string) => {
   const token = localStorage.getItem('moodle_token')
   return `${proxyUrl(url)}&token=${token}`
 }
-
-const DownloadIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
-    viewBox="0 0 24 24" fill="none" stroke="currentColor"
-    strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-    className="text-green-500 shrink-0"
-  >
-    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-    <polyline points="7 10 12 15 17 10"/>
-    <line x1="12" y1="15" x2="12" y2="3"/>
-  </svg>
-)
 
 const PageContent = ({ module, courseId }: { module: CourseModule; courseId: number }) => {
   const [html, setHtml] = useState('')
@@ -122,8 +111,7 @@ const PageContent = ({ module, courseId }: { module: CourseModule; courseId: num
               dark:bg-green-900 dark:text-green-300
               dark:hover:bg-red-900/30 dark:hover:text-red-400"
           >
-            <span>✓</span>
-            <span>Сохранена офлайн – удалить</span>
+            <span>Удалить</span>
           </button>
         ) : (
           <button
@@ -272,7 +260,7 @@ const TranscribeButton = ({ videoUrl, videoName }: { videoUrl: string; videoName
           transition-colors cursor-pointer
           bg-green-50 hover:bg-green-100 dark:bg-gray-700 dark:hover:bg-gray-600"
       >
-        <span className="text-xl">📄</span>
+        <Icon name="transcribe" size={20} />
         <div className="flex-1 text-left">
           <p className="text-sm font-medium text-gray-800 dark:text-white">
             Расшифровка текстом
@@ -299,7 +287,7 @@ const TranscribeButton = ({ videoUrl, videoName }: { videoUrl: string; videoName
       <div className="px-4 py-3 rounded-xl bg-green-50 dark:bg-gray-700 space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <span className="text-xl">⏳</span>
+            <Icon name="clock" size={20} />
             <div>
               <p className="text-sm font-medium text-gray-800 dark:text-white">
                 Расшифровываем... {timeStr}
@@ -340,7 +328,7 @@ const TranscribeButton = ({ videoUrl, videoName }: { videoUrl: string; videoName
         className="w-full flex items-center gap-3 px-4 py-3 rounded-xl
           cursor-pointer bg-red-50 dark:bg-red-900/20"
       >
-        <span className="text-xl">❌</span>
+        <Icon name="default" size={20} />
         <div className="flex-1 text-left">
           <p className="text-sm font-medium text-red-600 dark:text-red-400">
             Ошибка расшифровки
@@ -356,7 +344,7 @@ const TranscribeButton = ({ videoUrl, videoName }: { videoUrl: string; videoName
       <div className="px-4 py-3 rounded-xl bg-green-50 dark:bg-gray-700">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
-            <span className="text-xl">✅</span>
+            <Icon name="ok" size={20} />
             <p className="text-sm font-medium text-gray-800 dark:text-white">
               Расшифровка готова
             </p>
@@ -476,7 +464,7 @@ const VideoContent = ({ module }: { module: CourseModule }) => {
             onClick={handleDeleteCache}
             className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors cursor-pointer bg-green-50 hover:bg-red-50 dark:bg-gray-700 dark:hover:bg-red-900/20"
           >
-            <span className="text-xl">✅</span>
+            <Icon name="ok" size={20} />
             <div className="flex-1 text-left">
               <p className="text-sm font-medium text-gray-800 dark:text-white">Сохранено офлайн</p>
               <p className="text-xs text-gray-400">Нажмите чтобы удалить из кэша</p>
@@ -488,7 +476,7 @@ const VideoContent = ({ module }: { module: CourseModule }) => {
             disabled={caching}
             className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors cursor-pointer bg-green-50 hover:bg-green-100 dark:bg-gray-700 dark:hover:bg-gray-600 disabled:opacity-70"
           >
-            <span className="text-xl">💾</span>
+            <Icon name="offline" size={20} />
             <div className="flex-1 text-left">
               <p className="text-sm font-medium text-gray-800 dark:text-white">
                 {caching ? `Сохраняем... ${cacheProgress}%` : 'Сохранить для офлайна'}
@@ -513,7 +501,7 @@ const VideoContent = ({ module }: { module: CourseModule }) => {
           download={videoFile.filename}
           className="flex items-center gap-3 px-4 py-3 rounded-xl transition-colors cursor-pointer bg-green-50 hover:bg-green-100 dark:bg-gray-700 dark:hover:bg-gray-600"
         >
-          <span className="text-xl">🎬</span>
+          <Icon name="video" size={20} />
           <div className="flex-1">
             <p className="text-sm font-medium text-gray-800 dark:text-white">Скачать на устройство</p>
             <p className="text-xs text-gray-400">{fileSizeMb} МБ • MP4</p>
@@ -526,7 +514,7 @@ const VideoContent = ({ module }: { module: CourseModule }) => {
           disabled={extractingAudio}
           className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors cursor-pointer bg-green-50 hover:bg-green-100 dark:bg-gray-700 dark:hover:bg-gray-600 disabled:opacity-50"
         >
-          <span className="text-xl">🎵</span>
+          <Icon name="audio" size={20} />
           <div className="flex-1 text-left">
             <p className="text-sm font-medium text-gray-800 dark:text-white">
               {extractingAudio ? 'Извлекаем аудио...' : 'Скачать аудио'}
@@ -600,13 +588,66 @@ const UrlContent = ({ module }: { module: CourseModule }) => {
   )
 }
 
+const PdfContent = ({ module }: { module: CourseModule }) => {
+  const token = localStorage.getItem('moodle_token')
+  const file = module.contents?.[0]
+  if (!file) return <UnsupportedContent module={module} />
+
+  const url = `${file.fileurl.replace('http://localhost:8000', '/moodle-api')}&token=${token}`
+
+  return (
+    <div className="rounded-2xl p-6
+      bg-white dark:bg-gray-800
+      border border-green-100 dark:border-gray-700 space-y-4"
+    >
+      <div className="flex items-center gap-3">
+        <Icon name="resource" size={24} />
+        <p className="text-sm font-medium text-gray-800 dark:text-white flex-1 min-w-0 truncate">
+          {file.filename}
+        </p>
+      </div>
+
+      <p className="text-xs text-gray-500 dark:text-gray-400">
+        Размер: {(file.filesize / 1024 / 1024).toFixed(2)} МБ
+      </p>
+
+      <div className="flex gap-3">
+        <a
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex-1 py-2.5 rounded-xl text-sm font-medium text-center
+            bg-green-500 hover:bg-green-600 text-white
+            cursor-pointer transition-colors"
+        >
+          Открыть PDF
+        </a>
+        <a
+          href={url}
+          download={file.filename}
+          className="flex-1 py-2.5 rounded-xl text-sm font-medium text-center
+            border border-green-500 text-green-600 dark:text-green-400
+            hover:bg-green-50 dark:hover:bg-green-900/20
+            cursor-pointer transition-colors"
+        >
+          Скачать
+        </a>
+      </div>
+    </div>
+  )
+}
+
 const getModuleType = (module: CourseModule) => {
-  if (module.modname === 'quiz') return 'quiz'
   if (module.modname === 'url') return 'url'
-  if (module.modname === 'page') {
-    const hasVideo = module.contents?.some(c => c.mimetype?.startsWith('video/'))
-    return hasVideo ? 'video' : 'page'
+  if (module.modname === 'quiz') return 'quiz'
+  if (module.modname === 'page') return 'page'
+  
+  if (module.modname === 'resource') {
+    const mimetype = module.contents?.[0]?.mimetype
+    if (mimetype === 'video/mp4') return 'video'
+    if (mimetype === 'application/pdf') return 'pdf'
   }
+  
   return 'unsupported'
 }
 
@@ -653,6 +694,7 @@ export const LessonPage = () => {
       case 'video': return <VideoContent module={module} />
       case 'quiz':  return <QuizContent />
       case 'url':   return <UrlContent module={module} />
+      case 'pdf': return <PdfContent module={module} />
       default:      return <UnsupportedContent module={module} />
     }
   }
