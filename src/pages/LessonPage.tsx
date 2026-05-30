@@ -8,6 +8,7 @@ import { Layout } from '../components/Layout'
 import type { CourseModule } from '../types'
 import { jsPDF } from 'jspdf'
 import { transcribeVideo, extractAudio } from '../api/moodle'
+import { Icon } from '../components/Icon'
 
 
 const proxyUrl = (url: string) =>
@@ -556,7 +557,9 @@ const UnsupportedContent = ({ module }: { module: CourseModule }) => (
     bg-white dark:bg-gray-800
     border border-green-100 dark:border-gray-700"
   >
-    <div className="text-4xl mb-3">📌</div>
+    <div className="flex justify-center mb-3">
+      <Icon name="default" size={50} />
+    </div>
     <p className="font-medium text-gray-700 dark:text-gray-300">{module.name}</p>
     <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
       Этот тип контента пока не поддерживается

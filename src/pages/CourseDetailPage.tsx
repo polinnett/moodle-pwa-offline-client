@@ -6,20 +6,22 @@ import { saveCourseOffline, getOfflineCourse, deleteOfflineCourse } from '../db'
 import { useOfflineStatus } from '../hooks/useOfflineStatus'
 import { Layout } from '../components/Layout'
 import type { CourseSection, CourseModule, OfflineCourse } from '../types'
+import { Icon } from '../components/Icon'
 
 const ModuleIcon = ({ modname }: { modname: string }) => {
   const icons: Record<string, string> = {
-    resource: '📄',
-    page:     '📝',
-    url:      '🔗',
-    folder:   '📁',
-    video:    '🎬',
-    assign:   '📋',
-    quiz:     '❓',
-    forum:    '💬',
-    label:    '🏷️',
+    resource: 'resource',
+    page:     'page',
+    url:      'url',
+    folder:   'folder',
+    assign:   'assign',
+    quiz:     'quiz',
+    forum:    'forum',
+    label:    'label',
+    book:     'book',
   }
-  return <span className="text-lg">{icons[modname] ?? '📌'}</span>
+  const iconName = icons[modname] ?? 'default'
+  return <Icon name={iconName} size={20} />
 }
 
 const ModuleItem = ({

@@ -14,7 +14,7 @@ export const ThemeToggle = () => {
     <button
       onClick={toggleTheme}
       style={{ backgroundColor: bgColor }}
-      className="p-2.5 rounded-2xl cursor-pointer transition-colors hover:opacity-90"
+      className="p-2 rounded-full cursor-pointer transition-colors hover:opacity-90"
       aria-label="Переключить тему"
     >
       {theme === 'light' ? (

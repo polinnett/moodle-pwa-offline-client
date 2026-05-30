@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { login } from '../api/moodle'
 import { ThemeToggle } from '../components/ThemeToggle'
 import { Logo } from '../components/Logo'
+import { useOfflineStatus } from '../hooks/useOfflineStatus'
 
 const EyeIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
@@ -28,6 +29,7 @@ export const LoginPage = () => {
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const isOnline = useOfflineStatus()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -37,7 +39,7 @@ export const LoginPage = () => {
     try {
       const { token } = await login(username, password)
       localStorage.setItem('moodle_token', token)
-      navigate('/courses')
+      navigate('/home')
     } catch (err) {
       setError('Неверный логин или пароль')
     } finally {
@@ -70,6 +72,16 @@ export const LoginPage = () => {
           </div>
 
           <div className="rounded-2xl shadow-lg p-6 bg-white dark:bg-gray-800">
+          {!isOnline ? (
+            <div className="text-center py-4 space-y-3">
+              <p className="font-medium text-gray-800 dark:text-white">
+                Нет подключения к интернету
+              </p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                Для первичной авторизации необходимо интернет-соединение
+              </p>
+            </div>
+          ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
 
               <div>
@@ -148,6 +160,7 @@ export const LoginPage = () => {
               </button>
 
             </form>
+            )}
           </div>
 
           <p className="text-center text-xs mt-4 text-gray-400 dark:text-gray-500">

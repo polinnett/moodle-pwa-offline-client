@@ -36,3 +36,11 @@
 .quiz-content .accesshide { display: none; }
 .quiz-content .questionflag { display: none; }
 .quiz-content .badge { display: none; }
+
+body {
+  background-color: #f0fdf4;
+}
+
+.dark body {
+  background-color: #111827;
+}
