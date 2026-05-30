@@ -61,7 +61,7 @@ export const ForumPage = () => {
       <Layout title="Форум" showBack>
         <div className="rounded-2xl p-6 text-center
           bg-white dark:bg-gray-800
-          border border-red-100 dark:border-red-900"
+          border border-green-100 dark:border-gray-700"
         >
           <p className="font-medium text-gray-700 dark:text-gray-300">
             Не удалось загрузить форум

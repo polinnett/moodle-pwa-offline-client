@@ -10,6 +10,7 @@ import {
 } from '../api/moodle'
 import { Layout } from '../components/Layout'
 import { useOfflineStatus } from '../hooks/useOfflineStatus'
+import { Icon } from '../components/Icon'
 
 const parseQuestion = (html: string) => {
   const parser = new DOMParser()
@@ -295,14 +296,16 @@ export const QuizPage = () => {
       <Layout title="Тест" showBack>
         <div className="rounded-2xl p-6 text-center
           bg-white dark:bg-gray-800
-          border border-red-100 dark:border-red-900"
+          border border-green-100 dark:border-gray-700"
         >
-          <div className="text-4xl mb-3">❌</div>
+          <div className="flex justify-center mb-3">
+            <Icon name="default" size={48} />
+          </div>
           <p className="font-medium text-gray-700 dark:text-gray-300">
             Не удалось загрузить тест
           </p>
           <p className="text-sm text-gray-400 mt-1">
-            Проверьте подключение к интернету
+            Проверьте подключение к интернету. Тесты работают только при подключении к интернету
           </p>
         </div>
       </Layout>

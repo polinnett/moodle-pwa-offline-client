@@ -92,6 +92,7 @@ export const LoginPage = () => {
                 </label>
                 <input
                   type="text"
+                  autoComplete="username"
                   value={username}
                   onChange={e => setUsername(e.target.value)}
                   placeholder="Введите логин"
@@ -114,6 +115,7 @@ export const LoginPage = () => {
                 <div className="relative">
                   <input
                     type={showPassword ? 'text' : 'password'}
+                    autoComplete="current-password"
                     value={password}
                     onChange={e => setPassword(e.target.value)}
                     placeholder="Введите пароль"

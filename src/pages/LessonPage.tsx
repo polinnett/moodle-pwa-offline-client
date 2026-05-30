@@ -100,7 +100,9 @@ const PageContent = ({ module, courseId }: { module: CourseModule; courseId: num
         bg-white dark:bg-gray-800
         border border-green-100 dark:border-gray-700"
       >
-        <div className="text-4xl mb-3">📭</div>
+        <div className="flex justify-center mb-3">
+          <Icon name="default" size={48} />
+        </div>
         <p className="text-sm text-gray-500 dark:text-gray-400">
           {isOnline ? 'Не удалось загрузить лекцию' : 'Лекция не сохранена офлайн'}
         </p>
@@ -121,7 +123,7 @@ const PageContent = ({ module, courseId }: { module: CourseModule; courseId: num
               dark:hover:bg-red-900/30 dark:hover:text-red-400"
           >
             <span>✓</span>
-            <span>Сохранена офлайн — удалить</span>
+            <span>Сохранена офлайн – удалить</span>
           </button>
         ) : (
           <button
@@ -570,8 +572,37 @@ const UnsupportedContent = ({ module }: { module: CourseModule }) => (
   </div>
 )
 
+const UrlContent = ({ module }: { module: CourseModule }) => {
+  const url = module.contents?.[0]?.fileurl
+
+  return (
+    <div className="rounded-2xl p-6
+      bg-white dark:bg-gray-800
+      border border-green-100 dark:border-gray-700"
+    >
+      <p className="text-sm text-gray-800 dark:text-white mb-4">
+        Нажмите на ссылку, чтобы открыть ресурс:
+      </p>
+      {url ? (
+        <a
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-sm text-green-600 dark:text-green-400
+            hover:underline break-words leading-relaxed"
+        >
+          {module.name}
+        </a>
+      ) : (
+        <p className="text-sm text-gray-400">Ссылка недоступна</p>
+      )}
+    </div>
+  )
+}
+
 const getModuleType = (module: CourseModule) => {
   if (module.modname === 'quiz') return 'quiz'
+  if (module.modname === 'url') return 'url'
   if (module.modname === 'page') {
     const hasVideo = module.contents?.some(c => c.mimetype?.startsWith('video/'))
     return hasVideo ? 'video' : 'page'
@@ -618,9 +649,10 @@ export const LessonPage = () => {
   const renderContent = () => {
     if (!module) return null
     switch (getModuleType(module)) {
-      case 'page': return <PageContent module={module} courseId={id} />
+      case 'page':  return <PageContent module={module} courseId={id} />
       case 'video': return <VideoContent module={module} />
       case 'quiz':  return <QuizContent />
+      case 'url':   return <UrlContent module={module} />
       default:      return <UnsupportedContent module={module} />
     }
   }

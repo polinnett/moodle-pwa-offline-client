@@ -291,9 +291,13 @@ export const CourseDetailPage = () => {
         )}
 
         {!isOnline && offlineSections.length === 0 && (
-          <div className="text-center py-16 text-gray-400 dark:text-gray-500">
-            <div className="text-4xl mb-3">📭</div>
-            <p className="text-sm">Этот курс не скачан для офлайна</p>
+          <div className="text-center py-16">
+            <div className="flex justify-center mb-3">
+              <Icon name="default" size={48} />
+            </div>
+            <p className="text-sm text-gray-800 dark:text-white">
+              Этот курс не скачан для офлайна
+            </p>
           </div>
         )}
 
