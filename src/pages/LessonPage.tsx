@@ -1,4 +1,4 @@
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useState, useEffect, useRef } from 'react'
 import { getCourseContents } from '../api/moodle'
@@ -637,10 +637,128 @@ const PdfContent = ({ module }: { module: CourseModule }) => {
   )
 }
 
+const BookContent = ({ module }: { module: CourseModule }) => {
+  const token = localStorage.getItem('moodle_token')
+  const [chapters, setChapters] = useState<{ title: string; fileurl: string }[]>([])
+  const [currentChapter, setCurrentChapter] = useState(0)
+  const [html, setHtml] = useState('')
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const structureContent = module.contents?.find(c => c.filename === 'structure')
+    if (!structureContent?.content) return
+
+    const structure = JSON.parse(structureContent.content) as { title: string; href: string }[]
+    
+    const chapterFiles = module.contents?.filter(c => c.filename === 'index.html') ?? []
+    
+    const parsed = structure.map((s, i) => ({
+      title: s.title,
+      fileurl: chapterFiles[i]?.fileurl ?? '',
+    }))
+
+    setChapters(parsed)
+  }, [module])
+
+  useEffect(() => {
+    if (chapters.length === 0) return
+    const chapter = chapters[currentChapter]
+    if (!chapter?.fileurl) return
+
+    setLoading(true)
+    const url = `${chapter.fileurl.replace('http://localhost:8000', '/moodle-api')}?token=${token}`
+    fetch(url)
+      .then(r => r.text())
+      .then(text => { setHtml(text); setLoading(false) })
+      .catch(() => setLoading(false))
+  }, [chapters, currentChapter, token])
+
+  return (
+    <div className="space-y-4">
+      {chapters.length > 1 && (
+        <div className="rounded-2xl overflow-hidden
+          bg-white dark:bg-gray-800
+          border border-green-200 dark:border-gray-700"
+        >
+          <div className="px-4 py-3 border-b border-green-200 dark:border-gray-700">
+            <h2 className="font-bold text-sm text-gray-900 dark:text-white">Содержание</h2>
+          </div>
+          {chapters.map((ch, i) => (
+            <button
+              key={i}
+              onClick={() => setCurrentChapter(i)}
+              className={`w-full text-left px-4 py-2.5 text-sm transition-colors cursor-pointer
+                border-b border-gray-100 dark:border-gray-700 last:border-b-0
+                ${currentChapter === i
+                  ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 font-medium'
+                  : 'text-gray-700 dark:text-gray-300 hover:bg-green-50 dark:hover:bg-gray-700'
+                }`}
+            >
+              {ch.title}
+            </button>
+          ))}
+        </div>
+      )}
+
+      <div className="rounded-2xl p-5
+        bg-white dark:bg-gray-800
+        border border-green-100 dark:border-gray-700"
+      >
+        {loading ? (
+          <div className="animate-pulse space-y-3">
+            {[1,2,3,4].map(i => (
+              <div key={i} className="h-4 bg-gray-200 dark:bg-gray-700 rounded"/>
+            ))}
+          </div>
+        ) : (
+          <div
+            className="text-sm text-gray-800 dark:text-gray-200 leading-relaxed
+              [&_table]:w-full [&_table]:border-collapse
+              [&_td]:border [&_td]:border-gray-300 dark:[&_td]:border-gray-600
+              [&_td]:px-3 [&_td]:py-2
+              [&_th]:border [&_th]:border-gray-300 dark:[&_th]:border-gray-600
+              [&_th]:px-3 [&_th]:py-2
+              [&_table]:block [&_table]:overflow-x-auto
+              [&_h3]:text-lg [&_h3]:font-bold [&_h3]:mb-3 [&_h3]:mt-4 [&_h3]:text-gray-900 [&_h3]:dark:text-white"
+            dangerouslySetInnerHTML={{ __html: html }}
+          />
+        )}
+      </div>
+
+      {chapters.length > 1 && (
+        <div className="flex gap-3">
+          <button
+            onClick={() => setCurrentChapter(p => Math.max(0, p - 1))}
+            disabled={currentChapter === 0}
+            className="flex-1 py-2.5 rounded-xl text-sm font-medium
+              border border-green-500 text-green-600 dark:text-green-400
+              hover:bg-green-50 dark:hover:bg-green-900/20
+              disabled:opacity-30 disabled:cursor-not-allowed
+              cursor-pointer transition-colors"
+          >
+            Назад
+          </button>
+          <button
+            onClick={() => setCurrentChapter(p => Math.min(chapters.length - 1, p + 1))}
+            disabled={currentChapter === chapters.length - 1}
+            className="flex-1 py-2.5 rounded-xl text-sm font-medium
+              bg-green-500 hover:bg-green-600 text-white
+              disabled:opacity-30 disabled:cursor-not-allowed
+              cursor-pointer transition-colors"
+          >
+            Далее
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
 const getModuleType = (module: CourseModule) => {
   if (module.modname === 'url') return 'url'
   if (module.modname === 'quiz') return 'quiz'
   if (module.modname === 'page') return 'page'
+  if (module.modname === 'book') return 'book'
   
   if (module.modname === 'resource') {
     const mimetype = module.contents?.[0]?.mimetype
@@ -695,6 +813,7 @@ export const LessonPage = () => {
       case 'quiz':  return <QuizContent />
       case 'url':   return <UrlContent module={module} />
       case 'pdf': return <PdfContent module={module} />
+      case 'book': return <BookContent module={module} />
       default:      return <UnsupportedContent module={module} />
     }
   }

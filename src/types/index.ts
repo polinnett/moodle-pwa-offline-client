@@ -38,10 +38,17 @@ export interface CourseOverviewFile {
 export interface ModuleContent {
   type: string;
   filename: string;
-  fileurl: string;
+  filepath?: string | null;
   filesize: number;
+  fileurl: string;
+  content?: string | null;
+  timecreated?: number | null;
+  timemodified?: number | null;
+  sortorder?: number | null;
   mimetype?: string;
-  timemodified?: number;
+  userid?: number | null;
+  author?: string | null;
+  license?: string | null;
 }
 
 export interface OfflineCourse {
