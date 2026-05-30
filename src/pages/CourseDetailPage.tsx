@@ -42,12 +42,19 @@ const ModuleItem = ({
     )
   }
 
+  const supportedModules = ['page', 'resource', 'url', 'quiz', 'forum', 'book']
+  const isSupported = supportedModules.includes(module.modname)
+
   return (
     <button
-      onClick={onClick}
-      className="w-full text-left flex items-start gap-3 px-3 py-2.5
-        rounded-xl transition-colors cursor-pointer
-        hover:bg-green-50 dark:hover:bg-gray-700"
+      onClick={isSupported ? onClick : undefined}
+      disabled={!isSupported}
+      className={`w-full text-left flex items-start gap-3 px-3 py-2.5
+        rounded-xl transition-colors
+        ${isSupported
+          ? 'hover:bg-green-50 dark:hover:bg-gray-700 cursor-pointer'
+          : 'opacity-40 cursor-not-allowed'
+        }`}
     >
       <div className="shrink-0 mt-0.5">
         <ModuleIcon modname={module.modname} />
@@ -58,20 +65,25 @@ const ModuleItem = ({
         </span>
         {module.description && (
           <p
-          className="text-xs text-gray-400 dark:text-gray-500 mt-0.5 leading-relaxed whitespace-normal"
-          dangerouslySetInnerHTML={{
-            __html: module.description
-          }}
-        />
+            className="text-xs text-gray-400 dark:text-gray-500 mt-0.5 leading-relaxed"
+            dangerouslySetInnerHTML={{ __html: module.description }}
+          />
+        )}
+        {!isSupported && (
+          <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+            Этот тип контента пока недоступен в приложении
+          </p>
         )}
       </div>
-      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
-        viewBox="0 0 24 24" fill="none" stroke="currentColor"
-        strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-        className="text-gray-300 dark:text-gray-600 shrink-0 mt-0.5"
-      >
-        <path d="M9 18l6-6-6-6"/>
-      </svg>
+      {isSupported && (
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+          viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+          className="text-gray-300 dark:text-gray-600 shrink-0 mt-0.5"
+        >
+          <path d="M9 18l6-6-6-6"/>
+        </svg>
+      )}
     </button>
   )
 }

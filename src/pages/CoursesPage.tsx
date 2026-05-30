@@ -66,7 +66,7 @@ const CourseCard = ({
               bg-green-100 text-green-700
               dark:bg-green-900 dark:text-green-300"
             >
-              ✓ Офлайн
+              Офлайн
             </span>
           )}
         </div>
