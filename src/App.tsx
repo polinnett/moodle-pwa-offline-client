@@ -8,6 +8,7 @@ import { CourseDetailPage } from './pages/CourseDetailPage'
 import { LessonPage } from './pages/LessonPage'
 import { QuizPage } from './pages/QuizPage'
 import { HomePage } from './pages/HomePage'
+import { ForumPage } from './pages/ForumPage'
 
 const queryClient = new QueryClient()
 
@@ -32,6 +33,9 @@ function App() {
             } />
             <Route path="/home" element={
               <RequireAuth><HomePage /></RequireAuth>
+            } />
+            <Route path="/courses/:courseId/forum/:moduleId" element={
+              <RequireAuth><ForumPage /></RequireAuth>
             } />
             <Route path="/" element={<Navigate to="/login" replace />} />
           </Routes>

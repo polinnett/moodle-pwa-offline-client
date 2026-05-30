@@ -58,11 +58,11 @@ const ModuleItem = ({
         </span>
         {module.description && (
           <p
-            className="text-xs text-gray-400 dark:text-gray-500 mt-0.5 leading-relaxed"
-            dangerouslySetInnerHTML={{
-              __html: module.description.replace(/<[^>]*>/g, '')
-            }}
-          />
+          className="text-xs text-gray-400 dark:text-gray-500 mt-0.5 leading-relaxed whitespace-normal"
+          dangerouslySetInnerHTML={{
+            __html: module.description
+          }}
+        />
         )}
       </div>
       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
@@ -247,6 +247,8 @@ export const CourseDetailPage = () => {
   const handleModuleClick = (module: CourseModule) => {
     if (module.modname === 'quiz') {
       navigate(`/courses/${id}/quiz/${module.id}`)
+    } else if (module.modname === 'forum') {
+      navigate(`/courses/${id}/forum/${module.id}`)
     } else {
       navigate(`/courses/${id}/lessons/${module.id}`)
     }

@@ -205,3 +205,17 @@ export const getAttemptReview = async (attemptId: number) => {
   const result = await response.json();
   return result;
 };
+
+export const getForumsByCourse = async (courseId: number) => {
+  const res = await ws("mod_forum_get_forums_by_courses", {
+    "courseids[0]": courseId,
+  });
+  return res.data;
+};
+
+export const getForumDiscussions = async (forumId: number) => {
+  const res = await ws("mod_forum_get_forum_discussions", {
+    forumid: forumId,
+  });
+  return res.data.discussions;
+};
