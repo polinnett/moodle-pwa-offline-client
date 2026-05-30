@@ -10,6 +10,7 @@ import { jsPDF } from 'jspdf'
 import { transcribeVideo, extractAudio } from '../api/moodle'
 import { Icon } from '../components/Icon'
 import { DownloadIcon } from '../components/DownloadIcon'
+import { ModuleDescription } from '../components/ModuleDescription'
 
 
 const proxyUrl = (url: string) =>
@@ -448,6 +449,7 @@ const VideoContent = ({ module }: { module: CourseModule }) => {
 
   return (
     <div className="space-y-4">
+      <ModuleDescription description={module.description} />
       <div className="rounded-2xl overflow-hidden bg-black">
         <video controls className="w-full max-h-72" src={cachedUrl ?? videoSrc}>
           Ваш браузер не поддерживает видео
@@ -564,26 +566,29 @@ const UrlContent = ({ module }: { module: CourseModule }) => {
   const url = module.contents?.[0]?.fileurl
 
   return (
-    <div className="rounded-2xl p-6
-      bg-white dark:bg-gray-800
-      border border-green-100 dark:border-gray-700"
-    >
-      <p className="text-sm text-gray-800 dark:text-white mb-4">
-        Нажмите на ссылку, чтобы открыть ресурс:
-      </p>
-      {url ? (
-        <a
-          href={url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-sm text-green-600 dark:text-green-400
-            hover:underline break-words leading-relaxed"
-        >
-          {module.name}
-        </a>
-      ) : (
-        <p className="text-sm text-gray-400">Ссылка недоступна</p>
-      )}
+    <div className="space-y-4">
+      <ModuleDescription description={module.description} />
+      <div className="rounded-2xl p-6
+        bg-white dark:bg-gray-800
+        border border-green-100 dark:border-gray-700"
+      >
+        <p className="text-sm text-gray-800 dark:text-white mb-1">
+          Нажмите на ссылку, чтобы открыть ресурс:
+        </p>
+        {url ? (
+          <a
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-sm text-green-600 dark:text-green-400
+              hover:underline break-words leading-relaxed"
+          >
+            {module.name}
+          </a>
+        ) : (
+          <p className="text-sm text-gray-400">Ссылка недоступна</p>
+        )}
+      </div>
     </div>
   )
 }
@@ -593,45 +598,48 @@ const PdfContent = ({ module }: { module: CourseModule }) => {
   const file = module.contents?.[0]
   if (!file) return <UnsupportedContent module={module} />
 
-  const url = `${file.fileurl.replace('http://localhost:8000', '/moodle-api')}&token=${token}`
+  const url = `${file.fileurl?.replace('http://localhost:8000', '/moodle-api')}&token=${token}`
 
   return (
-    <div className="rounded-2xl p-6
-      bg-white dark:bg-gray-800
-      border border-green-100 dark:border-gray-700 space-y-4"
-    >
-      <div className="flex items-center gap-3">
-        <Icon name="resource" size={24} />
-        <p className="text-sm font-medium text-gray-800 dark:text-white flex-1 min-w-0 truncate">
-          {file.filename}
+    <div className="space-y-4">
+      <ModuleDescription description={module.description} />
+      <div className="rounded-2xl p-6
+        bg-white dark:bg-gray-800
+        border border-green-100 dark:border-gray-700 space-y-4"
+      >
+        <div className="flex items-center gap-3">
+          <Icon name="resource" size={24} />
+          <p className="text-sm font-medium text-gray-800 dark:text-white flex-1 min-w-0 truncate">
+            {file.filename}
+          </p>
+        </div>
+
+        <p className="text-xs text-gray-500 dark:text-gray-400">
+          Размер: {(file.filesize / 1024 / 1024).toFixed(2)} МБ
         </p>
-      </div>
 
-      <p className="text-xs text-gray-500 dark:text-gray-400">
-        Размер: {(file.filesize / 1024 / 1024).toFixed(2)} МБ
-      </p>
-
-      <div className="flex gap-3">
-        <a
-          href={url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex-1 py-2.5 rounded-xl text-sm font-medium text-center
-            bg-green-500 hover:bg-green-600 text-white
-            cursor-pointer transition-colors"
-        >
-          Открыть PDF
-        </a>
-        <a
-          href={url}
-          download={file.filename}
-          className="flex-1 py-2.5 rounded-xl text-sm font-medium text-center
-            border border-green-500 text-green-600 dark:text-green-400
-            hover:bg-green-50 dark:hover:bg-green-900/20
-            cursor-pointer transition-colors"
-        >
-          Скачать
-        </a>
+        <div className="flex gap-3">
+          <a
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex-1 py-2.5 rounded-xl text-sm font-medium text-center
+              bg-green-500 hover:bg-green-600 text-white
+              cursor-pointer transition-colors"
+          >
+            Открыть PDF
+          </a>
+          <a
+            href={url}
+            download={file.filename}
+            className="flex-1 py-2.5 rounded-xl text-sm font-medium text-center
+              border border-green-500 text-green-600 dark:text-green-400
+              hover:bg-green-50 dark:hover:bg-green-900/20
+              cursor-pointer transition-colors"
+          >
+            Скачать
+          </a>
+        </div>
       </div>
     </div>
   )
@@ -699,7 +707,7 @@ const BookContent = ({ module }: { module: CourseModule }) => {
           ))}
         </div>
       )}
-
+      <ModuleDescription description={module.description} />
       <div className="rounded-2xl p-5
         bg-white dark:bg-gray-800
         border border-green-100 dark:border-gray-700"
