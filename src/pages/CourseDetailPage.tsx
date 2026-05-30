@@ -37,9 +37,7 @@ const ModuleItem = ({
         className="px-4 py-3 text-sm text-gray-800 dark:text-white
           leading-relaxed border-b border-green-200 dark:border-gray-700
           last:border-b-0"
-        dangerouslySetInnerHTML={{
-          __html: module.description ?? module.name
-        }}
+        dangerouslySetInnerHTML={{ __html: module.description ?? module.name }}
       />
     )
   }
@@ -47,18 +45,30 @@ const ModuleItem = ({
   return (
     <button
       onClick={onClick}
-      className="w-full text-left flex items-center gap-3 px-3 py-2.5
+      className="w-full text-left flex items-start gap-3 px-3 py-2.5
         rounded-xl transition-colors cursor-pointer
         hover:bg-green-50 dark:hover:bg-gray-700"
     >
-      <ModuleIcon modname={module.modname} />
-      <span className="flex-1 text-sm text-gray-700 dark:text-gray-300 leading-snug">
-        {module.name}
-      </span>
+      <div className="shrink-0 mt-0.5">
+        <ModuleIcon modname={module.modname} />
+      </div>
+      <div className="flex-1 min-w-0">
+        <span className="text-sm text-gray-700 dark:text-gray-300 leading-snug">
+          {module.name}
+        </span>
+        {module.description && (
+          <p
+            className="text-xs text-gray-400 dark:text-gray-500 mt-0.5 leading-relaxed"
+            dangerouslySetInnerHTML={{
+              __html: module.description.replace(/<[^>]*>/g, '')
+            }}
+          />
+        )}
+      </div>
       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
         viewBox="0 0 24 24" fill="none" stroke="currentColor"
         strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-        className="text-gray-300 dark:text-gray-600 shrink-0"
+        className="text-gray-300 dark:text-gray-600 shrink-0 mt-0.5"
       >
         <path d="M9 18l6-6-6-6"/>
       </svg>

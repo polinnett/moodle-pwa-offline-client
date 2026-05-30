@@ -6,6 +6,7 @@ import { getOfflineCourses } from '../db'
 import { useOfflineStatus } from '../hooks/useOfflineStatus'
 import { Layout } from '../components/Layout'
 import type { Course, OfflineCourse } from '../types'
+import { Icon } from '../components/Icon'
 
 const CourseCard = ({
     course,
@@ -24,14 +25,16 @@ const CourseCard = ({
     return (
       <button
         onClick={onClick}
+        style={{ '--hover-border': 'var(--color-primary-600)' } as React.CSSProperties}
         className="w-full text-left rounded-2xl overflow-hidden transition-all cursor-pointer
           bg-white dark:bg-gray-800
-          border border-green-100 dark:border-gray-700
-          hover:border-green-300 dark:hover:border-green-700
+          border-2 border-transparent
           hover:shadow-md shadow-sm"
+        onMouseEnter={e => (e.currentTarget.style.borderColor = 'var(--color-primary-600)')}
+        onMouseLeave={e => (e.currentTarget.style.borderColor = 'transparent')}
       >
         {imageUrl && (
-          <div className="w-full h-32 overflow-hidden">
+          <div className="w-full h-48 overflow-hidden">
             <img
               src={imageUrl}
               alt={course.fullname}
@@ -111,14 +114,14 @@ export const CoursesPage = () => {
 
   return (
     <Layout title="Мои курсы">
-      <div className="space-y-3">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
         {!isOnline && (
           <div className="text-sm text-center py-2 px-4 rounded-xl
             bg-yellow-50 text-yellow-700
             dark:bg-yellow-900/20 dark:text-yellow-400"
           >
-            Офлайн-режим — показаны скачанные курсы
+            Офлайн-режим – показаны только скачанные курсы
           </div>
         )}
 
@@ -147,8 +150,10 @@ export const CoursesPage = () => {
 
         {!isLoading && !error && displayCourses.length === 0 && (
           <div className="text-center py-16 text-gray-400 dark:text-gray-500">
-            <div className="text-4xl mb-3">📭</div>
-            <p className="text-sm">
+            <div className="flex justify-center mb-3">
+              <Icon name="default" size={48} />
+            </div>
+            <p className="text-base text-gray-800 dark:text-white">
               {isOnline ? 'Нет доступных курсов' : 'Нет скачанных курсов'}
             </p>
           </div>
