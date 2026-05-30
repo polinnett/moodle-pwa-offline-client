@@ -140,7 +140,7 @@ const PageContent = ({ module, courseId }: { module: CourseModule; courseId: num
               <polyline points="7 10 12 15 17 10"/>
               <line x1="12" y1="15" x2="12" y2="3"/>
             </svg>
-            <span>{saving ? 'Сохраняем...' : 'Сохранить офлайн'}</span>
+            <span>{saving ? 'Сохраняем...' : 'Сохранить'}</span>
           </button>
         )}
       </div>
@@ -156,6 +156,9 @@ const PageContent = ({ module, courseId }: { module: CourseModule; courseId: num
           [&_td]:px-3 [&_td]:py-2 [&_th]:px-3 [&_th]:py-2
           [&_pre]:overflow-x-auto [&_pre]:whitespace-pre
           [&_code]:break-all
+          [&_table]:border-collapse
+          [&_td]:border [&_td]:border-gray-300 dark:[&_td]:border-gray-600
+          [&_th]:border [&_th]:border-gray-300 dark:[&_th]:border-gray-600
           overflow-hidden break-words"
         dangerouslySetInnerHTML={{ __html: html }}
       />

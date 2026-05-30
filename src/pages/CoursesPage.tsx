@@ -116,14 +116,14 @@ export const CoursesPage = () => {
     <Layout title="Мои курсы">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-        {!isOnline && (
-          <div className="text-sm text-center py-2 px-4 rounded-xl
-            bg-yellow-50 text-yellow-700
-            dark:bg-yellow-900/20 dark:text-yellow-400"
-          >
-            Офлайн-режим – показаны только скачанные курсы
-          </div>
-        )}
+      {!isOnline && (
+        <div className="col-span-full text-sm text-center py-2 px-4 rounded-xl
+          bg-yellow-50 text-yellow-700
+          dark:bg-yellow-900/20 dark:text-yellow-400"
+        >
+          Офлайн-режим – показаны только скачанные курсы
+        </div>
+      )}
 
         {isLoading && (
           <>
@@ -149,11 +149,11 @@ export const CoursesPage = () => {
         ))}
 
         {!isLoading && !error && displayCourses.length === 0 && (
-          <div className="text-center py-16 text-gray-400 dark:text-gray-500">
+          <div className="col-span-full text-center py-16">
             <div className="flex justify-center mb-3">
               <Icon name="default" size={48} />
             </div>
-            <p className="text-base text-gray-800 dark:text-white">
+            <p className="text-sm text-gray-800 dark:text-white">
               {isOnline ? 'Нет доступных курсов' : 'Нет скачанных курсов'}
             </p>
           </div>

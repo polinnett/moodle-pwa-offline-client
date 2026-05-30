@@ -110,7 +110,7 @@ const SectionBlock = ({
         />
       )}
 
-      <div className="divide-y divide-green-200 dark:divide-gray-700 p-1">
+      <div className="divide-green-200 dark:divide-gray-700 p-1">
         {visibleModules.map(module => (
           <ModuleItem
             key={module.id}
@@ -201,7 +201,7 @@ const DownloadButton = ({
         <polyline points="7 10 12 15 17 10"/>
         <line x1="12" y1="15" x2="12" y2="3"/>
       </svg>
-      <span>{loading ? 'Скачиваем...' : 'Скачать для офлайна'}</span>
+      <span>{loading ? 'Скачиваем...' : 'Скачать'}</span>
     </button>
   )
 }
