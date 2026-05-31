@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { ThemeToggle } from './ThemeToggle'
-import { Logo } from './Logo'
-import { useOfflineStatus } from '../hooks/useOfflineStatus'
+import { Logo } from '../ui/Logo'
+import { useOfflineStatus } from '../../hooks/useOfflineStatus'
 
 interface LayoutProps {
   children: React.ReactNode

@@ -4,7 +4,7 @@ import { useOfflineStatus } from '../../hooks/useOfflineStatus';
 import { getOfflineLesson, saveLessonOffline, deleteOfflineLesson } from '../../db'
 import type { CourseModule } from '../../types'
 import { proxyUrl, ensureCourseStructure } from '../../utils/moodle';
-import { Icon } from '../Icon'
+import { Icon } from '../ui/Icon'
 
 export const PageContent = ({ module, courseId }: { module: CourseModule; courseId: number }) => {
     const [html, setHtml] = useState('')

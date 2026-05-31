@@ -3,10 +3,10 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useOfflineStatus } from '../../hooks/useOfflineStatus';
 import type { CourseModule } from '../../types'
 import { ensureCourseStructure } from '../../utils/moodle';
-import { Icon } from '../Icon'
+import { Icon } from '../ui/Icon'
 import { UnsupportedContent } from './UnsupportedContent';
-import { ModuleDescription } from '../ModuleDescription';
-import { DownloadIcon } from '../DownloadIcon';
+import { ModuleDescription } from './ModuleDescription';
+import { DownloadIcon } from '../ui/DownloadIcon';
 
 export const PdfContent = ({ module, courseId }: { module: CourseModule; courseId: number }) => {
   const token = localStorage.getItem('moodle_token')

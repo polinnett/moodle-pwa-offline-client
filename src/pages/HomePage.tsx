@@ -1,6 +1,6 @@
-import { Layout } from '../components/Layout'
-import { Logo } from '../components/Logo'
-import { Icon } from '../components/Icon'
+import { Layout } from '../components/layout/Layout'
+import { Logo } from '../components/ui/Logo'
+import { Icon } from '../components/ui/Icon'
 
 export const HomePage = () => {
   return (

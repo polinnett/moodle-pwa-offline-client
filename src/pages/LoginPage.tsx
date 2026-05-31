@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { login } from '../api/moodle'
-import { ThemeToggle } from '../components/ThemeToggle'
-import { Logo } from '../components/Logo'
+import { ThemeToggle } from '../components/layout/ThemeToggle'
+import { Logo } from '../components/ui/Logo'
 import { useOfflineStatus } from '../hooks/useOfflineStatus'
 
 const EyeIcon = () => (

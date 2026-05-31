@@ -3,8 +3,8 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useOfflineStatus } from '../../hooks/useOfflineStatus';
 import { getOfflineLesson } from '../../db'
 import type { CourseModule } from '../../types'
-import { ModuleDescription } from '../ModuleDescription'
-import { Icon } from '../Icon'
+import { ModuleDescription } from './ModuleDescription'
+import { Icon } from '../ui/Icon'
 
 export const BookContent = ({ module, courseId }: { module: CourseModule; courseId: number }) => {
     const token = localStorage.getItem('moodle_token')

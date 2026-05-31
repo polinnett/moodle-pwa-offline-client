@@ -3,9 +3,9 @@ import { useNavigate, useParams } from 'react-router-dom';
 import type { CourseModule } from '../../types'
 import { ensureCourseStructure, fileUrl } from '../../utils/moodle';
 import { useOfflineStatus } from '../../hooks/useOfflineStatus';
-import { Icon } from '../Icon'
-import { ModuleDescription } from '../ModuleDescription';
-import { DownloadIcon } from '../DownloadIcon';
+import { Icon } from '../ui/Icon'
+import { ModuleDescription } from './ModuleDescription';
+import { DownloadIcon } from '../ui/DownloadIcon';
 import { extractAudio } from '../../api/moodle';
 import { TranscribeButton } from './TranscribeButton';
 

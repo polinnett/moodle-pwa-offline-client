@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Layout } from '../components/Layout'
+import { Layout } from '../components/layout/Layout'
 import { getForumsByCourse, getForumDiscussions } from '../api/moodle'
 import { useOfflineStatus } from '../hooks/useOfflineStatus'
 import { getOfflineLesson } from '../db'
-import { Icon } from '../components/Icon'
+import { Icon } from '../components/ui/Icon'
 
 interface Discussion {
   id: number

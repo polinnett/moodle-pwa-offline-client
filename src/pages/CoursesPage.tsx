@@ -4,11 +4,11 @@ import { useQuery } from '@tanstack/react-query'
 import { getMyCourses } from '../api/moodle'
 import { getOfflineCourses } from '../db'
 import { useOfflineStatus } from '../hooks/useOfflineStatus'
-import { Layout } from '../components/Layout'
+import { Layout } from '../components/layout/Layout'
 import type { Course, OfflineCourse } from '../types'
-import { Icon } from '../components/Icon'
-import { FullOfflineBadge } from '../components/FullOfflineBadge'
-import { OfflineBadge } from '../components/OfflineBadge'
+import { Icon } from '../components/ui/Icon'
+import { FullOfflineBadge } from '../components/badges/FullOfflineBadge'
+import { OfflineBadge } from '../components/badges/OfflineBadge'
 
 const CourseCard = ({
   course,

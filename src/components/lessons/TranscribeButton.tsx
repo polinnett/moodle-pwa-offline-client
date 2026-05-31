@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import { transcribeVideo } from '../../api/moodle';
 import jsPDF from 'jspdf';
-import { Icon } from '../Icon';
+import { Icon } from '../ui/Icon';
 
 export const TranscribeButton = ({ videoUrl, videoName }: { videoUrl: string; videoName: string }) => {
     const [status, setStatus] = useState<'idle' | 'loading' | 'done' | 'error'>('idle')

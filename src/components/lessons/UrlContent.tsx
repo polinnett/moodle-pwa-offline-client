@@ -1,5 +1,5 @@
 import type { CourseModule } from '../../types'
-import { ModuleDescription } from '../ModuleDescription';
+import { ModuleDescription } from './ModuleDescription';
 
 export const UrlContent = ({ module }: { module: CourseModule }) => {
   const url = module.contents?.[0]?.fileurl

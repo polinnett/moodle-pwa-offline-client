@@ -8,9 +8,9 @@ import {
   finishAttempt,
   getAttemptReview,
 } from '../api/moodle'
-import { Layout } from '../components/Layout'
+import { Layout } from '../components/layout/Layout'
 import { useOfflineStatus } from '../hooks/useOfflineStatus'
-import { Icon } from '../components/Icon'
+import { Icon } from '../components/ui/Icon'
 
 const parseQuestion = (html: string) => {
   const parser = new DOMParser()

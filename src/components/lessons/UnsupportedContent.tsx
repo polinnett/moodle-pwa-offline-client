@@ -1,4 +1,4 @@
-import { Icon } from '../Icon'
+import { Icon } from '../ui/Icon'
 import type { CourseModule } from '../../types'
 
 export const UnsupportedContent = ({ module }: { module: CourseModule }) => (
