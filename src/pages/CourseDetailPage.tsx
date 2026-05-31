@@ -7,6 +7,7 @@ import { useOfflineStatus } from '../hooks/useOfflineStatus'
 import { Layout } from '../components/Layout'
 import type { CourseSection, CourseModule, OfflineCourse } from '../types'
 import { Icon } from '../components/Icon'
+import { getOfflineLesson } from '../db'
 
 const ModuleIcon = ({ modname }: { modname: string }) => {
   const icons: Record<string, string> = {
@@ -31,6 +32,23 @@ const ModuleItem = ({
   module: CourseModule
   onClick: () => void
 }) => {
+  const [isSaved, setIsSaved] = useState(false)
+
+  useEffect(() => {
+    const checkSaved = async () => {
+      const lesson = await getOfflineLesson(module.id)
+      if (lesson) { setIsSaved(true); return }
+
+      const videoFile = module.contents?.find(c => c.mimetype === 'video/mp4')
+      if (videoFile?.fileurl) {
+        const cache = await caches.open('moodle-videos')
+        const match = await cache.match(videoFile.fileurl)
+        if (match) { setIsSaved(true); return }
+      }
+    }
+    checkSaved()
+  }, [module.id])
+
   if (module.modname === 'label') {
     return (
       <div
@@ -60,9 +78,19 @@ const ModuleItem = ({
         <ModuleIcon modname={module.modname} />
       </div>
       <div className="flex-1 min-w-0">
-        <span className="text-sm text-gray-700 dark:text-gray-300 leading-snug">
-          {module.name}
-        </span>
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-sm text-gray-700 dark:text-gray-300 leading-snug">
+            {module.name}
+          </span>
+          {isSaved && (
+            <span className="text-xs px-1.5 py-0.5 rounded-full shrink-0
+              bg-green-100 text-green-700
+              dark:bg-green-900 dark:text-green-300"
+            >
+              Офлайн
+            </span>
+          )}
+        </div>
         {module.description && (
           <p
             className="text-xs text-gray-400 dark:text-gray-500 mt-0.5 leading-relaxed"
