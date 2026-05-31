@@ -18,10 +18,23 @@ const parseQuestion = (html: string) => {
 
   const qtextEl = doc.querySelector('.qtext')
   qtextEl?.querySelectorAll('.accesshide').forEach(el => el.remove())
+
+  const isDdwtos = !!doc.querySelector('.placeinput')
+  const placeInputs = isDdwtos
+    ? Array.from(doc.querySelectorAll('.placeinput')) as HTMLInputElement[]
+    : []
+
+  let placeCounter = 0
+  qtextEl?.querySelectorAll('.drop').forEach(place => {
+    placeCounter++
+    const span = doc.createElement('span')
+    span.innerHTML = `<span style="display:inline-block;min-width:25px;padding:1px 4px;color:#16a34a;font-weight:bold;text-align:center;">[${placeCounter}]</span>`
+    place.replaceWith(span)
+  })
+
   const qtext = qtextEl?.innerHTML ?? ''
 
   const isMatch = !!doc.querySelector('select[name*="_sub"]')
-  const isDdwtos = !!doc.querySelector('.placeinput')
 
   const answers: { value: string; label: string }[] = []
   doc.querySelectorAll('.answer input[type="radio"]').forEach(input => {
@@ -75,11 +88,13 @@ const parseQuestion = (html: string) => {
     })
   }
 
-  const ddwtosData: { placeName: string; choices: string[] } | null = isDdwtos ? {
-    placeName: (doc.querySelector('.placeinput') as HTMLInputElement)?.name ?? '',
-    choices: Array.from(doc.querySelectorAll('.draghome')).map(
-      el => el.textContent?.trim() ?? ''
-    ).filter(Boolean),
+  const choices = isDdwtos ? Array.from(doc.querySelectorAll('.draghome')).map(
+    el => el.textContent?.trim() ?? ''
+  ).filter(Boolean) : []
+  
+  const ddwtosData: { places: { name: string }[]; choices: string[] } | null = isDdwtos ? {
+    places: placeInputs.map(p => ({ name: p.name })),
+    choices,
   } : null
 
   const firstInput = doc.querySelector(
@@ -90,7 +105,7 @@ const parseQuestion = (html: string) => {
   const seqEl = doc.querySelector('input[name*="sequencecheck"]') as HTMLInputElement
   const seqName = seqEl?.name ?? ''
   const seqValue = seqEl?.value ?? '1'
-  
+
   return { qtext, answers, fieldName, seqName, seqValue, matchRows, ddwtosData, isMatch, isDdwtos, isCheckbox, checkboxOptions, isShortAnswer, shortAnswerName }
 }
 
@@ -102,7 +117,7 @@ export const QuizPage = () => {
   const [attemptId, setAttemptId] = useState<number | null>(null)
   const [questions, setQuestions] = useState<{ slot: number; html: string; type: string }[]>([])
   const [answers, setAnswers] = useState<Record<string, string>>({})
-  const [status, setStatus] = useState<'loading' | 'resume' | 'quiz' | 'submitting' | 'result' | 'error'>('loading')
+  const [status, setStatus] = useState<'loading' | 'resume' | 'quiz' | 'submitting' | 'result' | 'error' | 'no_attempts'>('loading')
   const [result, setResult] = useState<{
     grade: number
     maxgrade: number
@@ -142,13 +157,17 @@ export const QuizPage = () => {
         setResumeTime(startTime)
 
         const data = await getAttemptData(attempt.id, 0)
-        setQuestions(data.questions)
+        setQuestions(data.questions ?? [])
         setNextPage(data.nextpage)
 
         const isNew = attempt.timemodified === attempt.timestart
         setStatus(isNew ? 'quiz' : 'resume')
-      } catch {
-        setStatus('error')
+      } catch (e) {
+        if (e instanceof Error && e.message === 'NO_ATTEMPTS_LEFT') {
+          setStatus('no_attempts')
+        } else {
+          setStatus('error')
+        }
       }
     }
     init()
@@ -168,7 +187,7 @@ export const QuizPage = () => {
       await saveAttemptAnswers(attemptId, submitData)
 
       const data = await getAttemptData(attemptId, nextPage)
-      setQuestions(data.questions)
+      setQuestions(data.questions ?? [])
       setNextPage(data.nextpage)
       setCurrentPage(nextPage)
       setAnswers({})
@@ -190,25 +209,20 @@ export const QuizPage = () => {
         const doc = parser.parseFromString(q.html, 'text/html')
         const seqEl = doc.querySelector('input[name*="sequencecheck"]') as HTMLInputElement
         if (seqEl?.name) submitData[seqEl.name] = seqEl.value
-
-        const checkboxInputs = doc.querySelectorAll<HTMLInputElement>('.answer input[type="hidden"][name*="_choice"]')
-        checkboxInputs.forEach(inp => {
-          if (!submitData[inp.name]) submitData[inp.name] = '0'
-        })
-
+      
         const isMatch = !!doc.querySelector('select[name*="_sub"]')
         const isDdwtos = !!doc.querySelector('.placeinput')
-
+      
         if (isMatch) {
           doc.querySelectorAll('select[name*="_sub"]').forEach(sel => {
             const select = sel as HTMLSelectElement
             if (!submitData[select.name]) submitData[select.name] = '0'
           })
         } else if (isDdwtos) {
-          const placeInput = doc.querySelector('.placeinput') as HTMLInputElement
-          if (placeInput?.name && !submitData[placeInput.name]) {
-            submitData[placeInput.name] = '0'
-          }
+          const places = Array.from(doc.querySelectorAll('.placeinput')) as HTMLInputElement[]
+          places.forEach((place: HTMLInputElement) => {
+            if (!submitData[place.name]) submitData[place.name] = '0'
+          })
         }
       })
 
@@ -286,6 +300,27 @@ export const QuizPage = () => {
           {[1, 2, 3].map(i => (
             <div key={i} className="h-24 rounded-2xl bg-gray-200 dark:bg-gray-700"/>
           ))}
+        </div>
+      </Layout>
+    )
+  }
+
+  if (status === 'no_attempts') {
+    return (
+      <Layout title={quizName} showBack>
+        <div className="rounded-2xl p-8 text-center
+          bg-white dark:bg-gray-800
+          border border-green-100 dark:border-gray-700"
+        >
+          <div className="flex justify-center mb-3">
+            <Icon name="default" size={48} />
+          </div>
+          <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
+            Попытки исчерпаны
+          </h2>
+          <p className="text-sm text-gray-500 dark:text-gray.400">
+            Вы использовали все доступные попытки для этого теста
+          </p>
         </div>
       </Layout>
     )
@@ -507,31 +542,33 @@ export const QuizPage = () => {
                     </div>
                   ))}
 
-                  {isDdwtos && ddwtosData && (() => {
-                    const placeName = ddwtosData.placeName
-                    return (
-                      <div className="px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-600">
-                        <p className="text-xs text-gray-400 mb-2">Выберите вариант:</p>
-                        <select
-                          defaultValue=""
-                          onChange={e => {
-                            const val = e.target.options[e.target.selectedIndex].value
-                            setAnswers(prev => ({ ...prev, [placeName]: val }))
-                          }}
-                          className="w-full text-sm rounded-lg px-3 py-2 cursor-pointer
-                            border border-gray-200 dark:border-gray-600
-                            bg-white dark:bg-gray-700
-                            text-gray-800 dark:text-gray-200
-                            focus:border-green-500 outline-none"
-                        >
-                          <option value="">Выберите...</option>
-                          {ddwtosData.choices.map((c, i) => (
-                            <option key={i} value={String(i + 1)}>{c}</option>
-                          ))}
-                        </select>
-                      </div>
-                    )
-                  })()}
+                  {isDdwtos && ddwtosData && (
+                    <div className="space-y-2">
+                      <p className="text-xs text-gray-400 px-1">Выберите варианты для каждого пропуска:</p>
+                      {ddwtosData.places.map((place, i) => (
+                        <div key={place.name} className="px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-600">
+                          <p className="text-xs text-gray-400 mb-2">Пропуск {i + 1}</p>
+                          <select
+                            defaultValue=""
+                            onChange={e => {
+                              const val = e.target.options[e.target.selectedIndex].value
+                              setAnswers(prev => ({ ...prev, [place.name]: val }))
+                            }}
+                            className="w-full text-sm rounded-lg px-3 py-2 cursor-pointer
+                              border border-gray-200 dark:border-gray-600
+                              bg-white dark:bg-gray-700
+                              text-gray-800 dark:text-gray-200
+                              focus:border-green-500 outline-none"
+                          >
+                            <option value="">Выберите...</option>
+                            {ddwtosData.choices.map((c, ci) => (
+                              <option key={ci} value={String(ci + 1)}>{c}</option>
+                            ))}
+                          </select>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             )

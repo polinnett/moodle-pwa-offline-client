@@ -123,6 +123,37 @@ export const getOrStartAttempt = async (quizId: number) => {
     localStorage.removeItem(`quiz_attempt_${quizId}`);
   }
 
+  const unfinishedResp = await fetch(
+    `/moodle-api/webservice/rest/server.php?wstoken=${token}&wsfunction=mod_quiz_get_user_attempts&quizid=${quizId}&status=unfinished&moodlewsrestformat=json`
+  );
+  const unfinishedData = await unfinishedResp.json();
+  const inProgress = unfinishedData.attempts?.find(
+    (a: { state: string }) => a.state === "inprogress"
+  );
+  if (inProgress) {
+    localStorage.setItem(`quiz_attempt_${quizId}`, String(inProgress.id));
+    return inProgress;
+  }
+
+  const allResp = await fetch(
+    `/moodle-api/webservice/rest/server.php?wstoken=${token}&wsfunction=mod_quiz_get_user_attempts&quizid=${quizId}&status=finished&moodlewsrestformat=json`
+  );
+  const allData = await allResp.json();
+  const finishedAttempts = allData.attempts ?? [];
+
+  const quizzesResp = await fetch(
+    `/moodle-api/webservice/rest/server.php?wstoken=${token}&wsfunction=mod_quiz_get_quizzes_by_courses&moodlewsrestformat=json`
+  );
+  const quizzesData = await quizzesResp.json();
+  const quiz = quizzesData.quizzes?.find(
+    (q: { id: number }) => q.id === quizId
+  );
+  const maxAttempts = quiz?.attempts ?? 0;
+
+  if (maxAttempts > 0 && finishedAttempts.length >= maxAttempts) {
+    throw new Error("NO_ATTEMPTS_LEFT");
+  }
+
   const response = await fetch("/moodle-api/webservice/rest/server.php", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -140,7 +171,7 @@ export const getOrStartAttempt = async (quizId: number) => {
     return data.attempt;
   }
 
-  throw new Error("Не удалось получить попытку. Попробуйте позже.");
+  throw new Error("Не удалось получить попытку");
 };
 
 export const getAttemptData = async (attemptId: number, page: number = 0) => {
