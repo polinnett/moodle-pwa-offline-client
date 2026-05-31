@@ -12,6 +12,7 @@ export const BookContent = ({ module, courseId }: { module: CourseModule; course
     const [loading, setLoading] = useState(true)
     const [isSaved, setIsSaved] = useState(false)
     const isOnline = useOfflineStatus()
+    const [saving, setSaving] = useState(false)
   
     useEffect(() => {
       getOfflineLesson(module.id).then(l => setIsSaved(!!l))
@@ -63,34 +64,39 @@ export const BookContent = ({ module, courseId }: { module: CourseModule; course
     }, [chapters, currentChapter, token, module.id])
   
     const handleSave = async () => {
-      const { saveLessonOffline } = await import('../../db')
-      const chapterFiles = module.contents?.filter(c => c.filename === 'index.html') ?? []
-      
-      for (let i = 0; i < chapterFiles.length; i++) {
-        const ch = chapterFiles[i]
-        if (!ch.fileurl) continue
-        const cleanUrl = ch.fileurl
-          .replace('http://localhost:8000', '/moodle-api')
-          .replace('?forcedownload=1', '')
-        const url = `${cleanUrl}?token=${token}`
-        const res = await fetch(url)
-        const html = await res.text()
+      setSaving(true)
+      try {
+        const { saveLessonOffline } = await import('../../db')
+        const chapterFiles = module.contents?.filter(c => c.filename === 'index.html') ?? []
+        
+        for (let i = 0; i < chapterFiles.length; i++) {
+          const ch = chapterFiles[i]
+          if (!ch.fileurl) continue
+          const cleanUrl = ch.fileurl
+            .replace('http://localhost:8000', '/moodle-api')
+            .replace('?forcedownload=1', '')
+          const url = `${cleanUrl}?token=${token}`
+          const res = await fetch(url)
+          const html = await res.text()
+          await saveLessonOffline({
+            id: module.id * 1000 + i,
+            courseId: 0,
+            name: `${module.name}_chapter_${i}`,
+            html,
+            savedAt: Date.now(),
+          })
+        }
         await saveLessonOffline({
-          id: module.id * 1000 + i,
+          id: module.id,
           courseId: 0,
-          name: `${module.name}_chapter_${i}`,
-          html,
+          name: module.name,
+          html: String(chapterFiles.length),
           savedAt: Date.now(),
         })
+        setIsSaved(true)
+      } finally {
+        setSaving(false)
       }
-      await saveLessonOffline({
-        id: module.id,
-        courseId: 0,
-        name: module.name,
-        html: String(chapterFiles.length),
-        savedAt: Date.now(),
-      })
-      setIsSaved(true)
     }
   
     const handleDelete = async () => {
@@ -127,10 +133,12 @@ export const BookContent = ({ module, courseId }: { module: CourseModule; course
             ) : (
               <button
                 onClick={handleSave}
+                disabled={saving}
                 className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm
                   font-medium cursor-pointer transition-colors
                   bg-green-500 text-white hover:bg-green-600
-                  dark:bg-green-600 dark:hover:bg-green-500"
+                  dark:bg-green-600 dark:hover:bg-green-500
+                  disabled:opacity-50"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
                   viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -139,7 +147,7 @@ export const BookContent = ({ module, courseId }: { module: CourseModule; course
                   <polyline points="7 10 12 15 17 10"/>
                   <line x1="12" y1="15" x2="12" y2="3"/>
                 </svg>
-                Сохранить
+                {saving ? 'Скачиваем...' : 'Сохранить'}
               </button>
             )
           )}
