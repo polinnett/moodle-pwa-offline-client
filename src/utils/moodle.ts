@@ -8,7 +8,9 @@ export const fileUrl = (url: string) => {
   return `${proxyUrl(url)}&token=${token}`;
 };
 
-export const ensureCourseStructure = async (courseId: number) => {
+export const ensureCourseStructure = async (
+  courseId: number
+): Promise<void> => {
   if (!courseId) return;
   const existing = await getOfflineCourse(courseId);
   if (existing) return;
@@ -27,5 +29,7 @@ export const ensureCourseStructure = async (courseId: number) => {
       downloadedAt: Date.now(),
       sections,
     });
-  } catch {}
+  } catch (error) {
+    console.error("Failed to ensure course structure:", error);
+  }
 };

@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom'
 import { useOfflineStatus } from '../../hooks/useOfflineStatus';
 import { getOfflineLesson } from '../../db'
 import type { CourseModule } from '../../types'
 import { ModuleDescription } from '../ModuleDescription'
+import { Icon } from '../Icon'
 
 export const BookContent = ({ module, courseId }: { module: CourseModule; courseId: number }) => {
     const token = localStorage.getItem('moodle_token')
@@ -11,8 +13,11 @@ export const BookContent = ({ module, courseId }: { module: CourseModule; course
     const [html, setHtml] = useState('')
     const [loading, setLoading] = useState(true)
     const [isSaved, setIsSaved] = useState(false)
+    const [notSaved, setNotSaved] = useState(false)
     const isOnline = useOfflineStatus()
     const [saving, setSaving] = useState(false)
+    const navigate = useNavigate()
+    const { courseId: routeCourseId } = useParams()
   
     useEffect(() => {
       getOfflineLesson(module.id).then(l => setIsSaved(!!l))
@@ -37,6 +42,7 @@ export const BookContent = ({ module, courseId }: { module: CourseModule; course
       if (!chapter?.fileurl) return
     
       setLoading(true)
+      setNotSaved(false)
     
       getOfflineLesson(module.id).then(async saved => {
         if (saved?.html) {
@@ -51,6 +57,12 @@ export const BookContent = ({ module, courseId }: { module: CourseModule; course
             }
           }
         }
+
+        if (!isOnline) {
+          setLoading(false)
+          setNotSaved(true)
+          return
+        }
       
         const cleanUrl = chapter.fileurl
           .replace('http://localhost:8000', '/moodle-api')
@@ -61,12 +73,14 @@ export const BookContent = ({ module, courseId }: { module: CourseModule; course
           .then(text => { setHtml(text); setLoading(false) })
           .catch(() => setLoading(false))
       })
-    }, [chapters, currentChapter, token, module.id])
+    }, [chapters, currentChapter, token, module.id, isOnline])
   
     const handleSave = async () => {
       setSaving(true)
       try {
         const { saveLessonOffline } = await import('../../db')
+        const { ensureCourseStructure } = await import('../../utils/moodle')
+        await ensureCourseStructure(courseId)
         const chapterFiles = module.contents?.filter(c => c.filename === 'index.html') ?? []
         
         for (let i = 0; i < chapterFiles.length; i++) {
@@ -80,7 +94,7 @@ export const BookContent = ({ module, courseId }: { module: CourseModule; course
           const html = await res.text()
           await saveLessonOffline({
             id: module.id * 1000 + i,
-            courseId: 0,
+            courseId,
             name: `${module.name}_chapter_${i}`,
             html,
             savedAt: Date.now(),
@@ -88,12 +102,13 @@ export const BookContent = ({ module, courseId }: { module: CourseModule; course
         }
         await saveLessonOffline({
           id: module.id,
-          courseId: 0,
+          courseId,
           name: module.name,
           html: String(chapterFiles.length),
           savedAt: Date.now(),
         })
         setIsSaved(true)
+        setNotSaved(false)
       } finally {
         setSaving(false)
       }
@@ -112,45 +127,60 @@ export const BookContent = ({ module, courseId }: { module: CourseModule; course
       }
       await deleteOfflineLesson(module.id)
       setIsSaved(false)
+      if (!isOnline) navigate(`/courses/${routeCourseId}`)
+    }
+
+    if (notSaved) {
+      return (
+        <div className="rounded-2xl p-6 text-center
+          bg-white dark:bg-gray-800
+          border border-green-100 dark:border-gray-700"
+        >
+          <div className="flex justify-center mb-3">
+            <Icon name="default" size={48} />
+          </div>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            Книга не сохранена для офлайна
+          </p>
+        </div>
+      )
     }
   
     return (
       <div className="space-y-4">
   
         <div className="flex justify-end">
-          {isOnline && (
-            isSaved ? (
-              <button
-                onClick={handleDelete}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm
-                  font-medium cursor-pointer transition-colors
-                  bg-green-100 text-green-700 hover:bg-red-100 hover:text-red-600
-                  dark:bg-green-900 dark:text-green-300
-                  dark:hover:bg-red-900/30 dark:hover:text-red-400"
-              >
-                <span>Удалить</span>
-              </button>
-            ) : (
-              <button
-                onClick={handleSave}
-                disabled={saving}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm
-                  font-medium cursor-pointer transition-colors
-                  bg-green-500 text-white hover:bg-green-600
-                  dark:bg-green-600 dark:hover:bg-green-500
-                  disabled:opacity-50"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
-                  viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                  strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                  <polyline points="7 10 12 15 17 10"/>
-                  <line x1="12" y1="15" x2="12" y2="3"/>
-                </svg>
-                {saving ? 'Скачиваем...' : 'Сохранить'}
-              </button>
-            )
-          )}
+          {isSaved ? (
+            <button
+              onClick={handleDelete}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm
+                font-medium cursor-pointer transition-colors
+                bg-green-100 text-green-700 hover:bg-red-100 hover:text-red-600
+                dark:bg-green-900 dark:text-green-300
+                dark:hover:bg-red-900/30 dark:hover:text-red-400"
+            >
+              <span>Удалить</span>
+            </button>
+          ) : isOnline ? (
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm
+                font-medium cursor-pointer transition-colors
+                bg-green-500 text-white hover:bg-green-600
+                dark:bg-green-600 dark:hover:bg-green-500
+                disabled:opacity-50"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="7 10 12 15 17 10"/>
+                <line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+              {saving ? 'Скачиваем...' : 'Сохранить'}
+            </button>
+          ) : null}
         </div>
   
         {chapters.length > 1 && (
