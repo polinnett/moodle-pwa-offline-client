@@ -196,7 +196,10 @@ const DownloadButton = ({
   const proxyUrl = (url: string) => url.replace('http://localhost:8000', '/moodle-api')
 
   const cacheModule = async (module: CourseModule) => {
+    const { getOfflineLesson } = await import('../db')
     if (module.modname === 'page') {
+      const existing = await getOfflineLesson(module.id)
+      if (existing) return
       const hasVideo = module.contents?.some(c => c.mimetype === 'video/mp4')
       if (hasVideo) return
       const htmlFile = module.contents?.find(c => c.filename === 'index.html')
@@ -229,6 +232,8 @@ const DownloadButton = ({
     }
 
     if (module.modname === 'book') {
+      const existing = await getOfflineLesson(module.id)
+      if (existing) return
       const chapters = module.contents?.filter(c => c.filename === 'index.html') ?? []
       const { saveLessonOffline } = await import('../db')
       
@@ -255,11 +260,15 @@ const DownloadButton = ({
     }
 
     if (module.modname === 'url' || module.modname === 'forum') {
+      const existing = await getOfflineLesson(module.id)
+      if (existing) return
       const { saveLessonOffline } = await import('../db')
       await saveLessonOffline({ id: module.id, courseId, name: module.name, html: '', savedAt: Date.now() })
     }
 
     if (module.modname === 'forum') {
+      const existing = await getOfflineLesson(module.id)
+      if (existing) return
       const { saveLessonOffline } = await import('../db')
       try {
         const { getForumsByCourse, getForumDiscussions } = await import('../api/moodle')
