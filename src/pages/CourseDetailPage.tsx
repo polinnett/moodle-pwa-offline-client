@@ -2,12 +2,11 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useState, useEffect } from 'react'
 import { getCourseContents } from '../api/moodle'
-import { saveCourseOffline, getOfflineCourse, deleteOfflineCourse } from '../db'
+import { saveCourseOffline, getOfflineCourse, deleteOfflineCourse, getOfflineLesson } from '../db'
 import { useOfflineStatus } from '../hooks/useOfflineStatus'
 import { Layout } from '../components/Layout'
 import type { CourseSection, CourseModule, OfflineCourse } from '../types'
 import { Icon } from '../components/Icon'
-import { getOfflineLesson } from '../db'
 
 const ModuleIcon = ({ modname }: { modname: string }) => {
   const icons: Record<string, string> = {
@@ -28,14 +27,17 @@ const ModuleIcon = ({ modname }: { modname: string }) => {
 const ModuleItem = ({
   module,
   onClick,
+  refreshKey,
 }: {
   module: CourseModule
   onClick: () => void
+  refreshKey: number
 }) => {
   const [isSaved, setIsSaved] = useState(false)
 
   useEffect(() => {
     const checkSaved = async () => {
+      setIsSaved(false)
       const lesson = await getOfflineLesson(module.id)
       if (lesson) { setIsSaved(true); return }
 
@@ -45,9 +47,16 @@ const ModuleItem = ({
         const match = await cache.match(videoFile.fileurl)
         if (match) { setIsSaved(true); return }
       }
+
+      const pdfFile = module.contents?.find(c => c.mimetype === 'application/pdf')
+      if (pdfFile?.fileurl) {
+        const cache = await caches.open('moodle-files')
+        const match = await cache.match(pdfFile.fileurl)
+        if (match) { setIsSaved(true); return }
+      }
     }
     checkSaved()
-  }, [module.id])
+  }, [module.id, refreshKey])
 
   if (module.modname === 'label') {
     return (
@@ -90,6 +99,14 @@ const ModuleItem = ({
               Офлайн
             </span>
           )}
+          {module.modname === 'quiz' && (
+            <span className="text-xs px-1.5 py-0.5 rounded-full shrink-0
+              bg-yellow-100 text-yellow-700
+              dark:bg-yellow-900/30 dark:text-yellow-400"
+            >
+              Только онлайн
+            </span>
+          )}
         </div>
         {module.description && (
           <p
@@ -119,9 +136,11 @@ const ModuleItem = ({
 const SectionBlock = ({
   section,
   onModuleClick,
+  refreshKey,
 }: {
   section: CourseSection
   onModuleClick: (module: CourseModule) => void
+  refreshKey: number
 }) => {
   const visibleModules = section.modules.filter(m => m.visible !== 0)
   if (visibleModules.length === 0) return null
@@ -156,6 +175,7 @@ const SectionBlock = ({
             key={module.id}
             module={module}
             onClick={() => onModuleClick(module)}
+            refreshKey={refreshKey}
           />
         ))}
       </div>
@@ -167,17 +187,71 @@ const DownloadButton = ({
   courseId,
   courseName,
   sections,
+  onRefresh,
 }: {
   courseId: number
   courseName: string
   sections: CourseSection[]
+  onRefresh: () => void
 }) => {
   const [isDownloaded, setIsDownloaded] = useState(false)
   const [loading, setLoading] = useState(false)
+  const token = localStorage.getItem('moodle_token')
+  const isOnline = useOfflineStatus()
 
   useEffect(() => {
     getOfflineCourse(courseId).then(c => setIsDownloaded(!!c))
   }, [courseId])
+
+  const proxyUrl = (url: string) => url.replace('http://localhost:8000', '/moodle-api')
+
+  const cacheModule = async (module: CourseModule) => {
+    if (module.modname === 'page') {
+      const hasVideo = module.contents?.some(c => c.mimetype === 'video/mp4')
+      if (hasVideo) return
+      const htmlFile = module.contents?.find(c => c.filename === 'index.html')
+      if (!htmlFile?.fileurl) return
+      const url = `${proxyUrl(htmlFile.fileurl)}&token=${token}`
+      const res = await fetch(url)
+      const html = await res.text()
+      const { saveLessonOffline } = await import('../db')
+      await saveLessonOffline({ id: module.id, courseId, name: module.name, html, savedAt: Date.now() })
+      return
+    }
+
+    if (module.modname === 'resource') {
+      const file = module.contents?.[0]
+      if (!file?.fileurl) return
+      const url = `${proxyUrl(file.fileurl)}&token=${token}`
+      const res = await fetch(url)
+      const blob = await res.blob()
+      const mimeType = file.mimetype === 'video/mp4' ? 'video/mp4' : 'application/pdf'
+      const cacheName = file.mimetype === 'video/mp4' ? 'moodle-videos' : 'moodle-files'
+      const cache = await caches.open(cacheName)
+      await cache.put(file.fileurl, new Response(blob, { headers: { 'Content-Type': mimeType } }))
+      return
+    }
+
+    if (module.modname === 'book') {
+      const chapters = module.contents?.filter(c => c.filename === 'index.html') ?? []
+      const htmlParts: string[] = []
+      for (const ch of chapters) {
+        if (!ch.fileurl) continue
+        const url = `${proxyUrl(ch.fileurl)}?token=${token}`
+        const res = await fetch(url)
+        const html = await res.text()
+        htmlParts.push(html)
+      }
+      const { saveLessonOffline } = await import('../db')
+      await saveLessonOffline({ id: module.id, courseId, name: module.name, html: htmlParts.join(''), savedAt: Date.now() })
+      return
+    }
+
+    if (module.modname === 'url' || module.modname === 'forum') {
+      const { saveLessonOffline } = await import('../db')
+      await saveLessonOffline({ id: module.id, courseId, name: module.name, html: '', savedAt: Date.now() })
+    }
+  }
 
   const handleDownload = async () => {
     setLoading(true)
@@ -190,7 +264,14 @@ const DownloadButton = ({
         sections,
       }
       await saveCourseOffline(course)
+
+      const allModules = sections.flatMap(s => s.modules).filter(m => m.visible !== 0)
+      for (const module of allModules) {
+        try { await cacheModule(module) } catch {}
+      }
+
       setIsDownloaded(true)
+      onRefresh()
     } finally {
       setLoading(false)
     }
@@ -200,7 +281,27 @@ const DownloadButton = ({
     setLoading(true)
     try {
       await deleteOfflineCourse(courseId)
+
+      const { deleteOfflineLesson } = await import('../db')
+      const allModules = sections.flatMap(s => s.modules)
+
+      for (const module of allModules) {
+        try { await deleteOfflineLesson(module.id) } catch {}
+
+        const videoFile = module.contents?.find(c => c.mimetype === 'video/mp4')
+        if (videoFile?.fileurl) {
+          const cache = await caches.open('moodle-videos')
+          await cache.delete(videoFile.fileurl)
+        }
+        const pdfFile = module.contents?.find(c => c.mimetype === 'application/pdf')
+        if (pdfFile?.fileurl) {
+          const cache = await caches.open('moodle-files')
+          await cache.delete(pdfFile.fileurl)
+        }
+      }
+
       setIsDownloaded(false)
+      onRefresh()
     } finally {
       setLoading(false)
     }
@@ -223,6 +324,7 @@ const DownloadButton = ({
     )
   }
 
+  if (!isOnline) return null
   return (
     <button
       onClick={handleDownload}
@@ -250,6 +352,7 @@ export const CourseDetailPage = () => {
   const navigate = useNavigate()
   const isOnline = useOfflineStatus()
   const id = Number(courseId)
+  const [refreshKey, setRefreshKey] = useState(0)
 
   const { data: sections, isLoading, error } = useQuery({
     queryKey: ['course', id],
@@ -261,15 +364,20 @@ export const CourseDetailPage = () => {
   const [offlineSections, setOfflineSections] = useState<CourseSection[]>([])
   const [courseName, setCourseName] = useState('')
 
+  const loadOfflineCourse = () => {
+    getOfflineCourse(id).then(c => {
+      if (c) {
+        setOfflineSections(c.sections)
+        setCourseName(c.fullname)
+      } else {
+        setOfflineSections([])
+        setCourseName('')
+      }
+    })
+  }
+
   useEffect(() => {
-    if (!isOnline) {
-      getOfflineCourse(id).then(c => {
-        if (c) {
-          setOfflineSections(c.sections)
-          setCourseName(c.fullname)
-        }
-      })
-    }
+    if (!isOnline) loadOfflineCourse()
   }, [id, isOnline])
 
   const { data: courses } = useQuery({
@@ -297,12 +405,16 @@ export const CourseDetailPage = () => {
     <Layout title={title} showBack>
       <div className="space-y-3">
 
-        {isOnline && sections && (
+        {sections && (
           <div className="flex justify-end">
             <DownloadButton
               courseId={id}
               courseName={title}
               sections={sections}
+              onRefresh={() => {
+                setRefreshKey(k => k + 1)
+                if (!isOnline) loadOfflineCourse()
+              }}
             />
           </div>
         )}
@@ -342,9 +454,10 @@ export const CourseDetailPage = () => {
 
         {displaySections.map(section => (
           <SectionBlock
-            key={section.id}
+            key={`${section.id}-${refreshKey}`}
             section={section}
             onModuleClick={handleModuleClick}
+            refreshKey={refreshKey}
           />
         ))}
 
