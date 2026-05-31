@@ -57,4 +57,5 @@ export interface OfflineCourse {
   shortname: string;
   downloadedAt: number;
   sections: CourseSection[];
+  fullyDownloaded?: boolean;
 }

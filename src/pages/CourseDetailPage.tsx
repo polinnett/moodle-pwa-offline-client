@@ -298,6 +298,7 @@ const DownloadButton = ({
         shortname: '',
         downloadedAt: Date.now(),
         sections,
+        fullyDownloaded: true,
       }
       await saveCourseOffline(course)
 

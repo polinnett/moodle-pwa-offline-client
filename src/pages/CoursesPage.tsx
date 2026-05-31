@@ -7,14 +7,18 @@ import { useOfflineStatus } from '../hooks/useOfflineStatus'
 import { Layout } from '../components/Layout'
 import type { Course, OfflineCourse } from '../types'
 import { Icon } from '../components/Icon'
+import { FullOfflineBadge } from '../components/FullOfflineBadge'
+import { OfflineBadge } from '../components/OfflineBadge'
 
 const CourseCard = ({
   course,
   isDownloaded,
+  isFullyDownloaded,
   onClick,
 }: {
   course: Course
   isDownloaded: boolean
+  isFullyDownloaded: boolean
   onClick: () => void
 }) => {
   const token = localStorage.getItem('moodle_token')
@@ -61,14 +65,11 @@ const CourseCard = ({
           )}
         </div>
 
-        {isDownloaded && (
-          <span className="shrink-0 text-xs font-medium px-2 py-1 rounded-full
-            bg-green-100 text-green-700
-            dark:bg-green-900 dark:text-green-300"
-          >
-            Офлайн
-          </span>
-        )}
+        {isFullyDownloaded ? (
+          <FullOfflineBadge />
+        ) : isDownloaded ? (
+          <OfflineBadge />
+        ) : null}
       </div>
     </button>
   )
@@ -111,6 +112,7 @@ export const CoursesPage = () => {
       }))
 
   const downloadedIds = new Set(offlineCourses.map(c => c.id))
+  const fullyDownloadedIds = new Set(offlineCourses.filter(c => c.fullyDownloaded).map(c => c.id))
 
   return (
     <Layout title="Мои курсы">
@@ -144,6 +146,7 @@ export const CoursesPage = () => {
             key={course.id}
             course={course}
             isDownloaded={downloadedIds.has(course.id)}
+            isFullyDownloaded={fullyDownloadedIds.has(course.id)}
             onClick={() => navigate(`/courses/${course.id}`)}
           />
         ))}

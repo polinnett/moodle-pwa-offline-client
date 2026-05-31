@@ -93,6 +93,11 @@ export const VideoContent = ({ module, courseId }: { module: CourseModule; cours
       const cache = await caches.open('moodle-videos')
       await cache.delete(videoSrc)
       setCachedUrl(null)
+      const { getOfflineCourse, saveCourseOffline } = await import('../../db')
+      const course = await getOfflineCourse(courseId)
+      if (course) {
+        await saveCourseOffline({ ...course, fullyDownloaded: false })
+      }
       if (!isOnline) navigate(`/courses/${routeCourseId}`)
     }
   

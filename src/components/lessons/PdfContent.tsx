@@ -88,6 +88,11 @@ export const PdfContent = ({ module, courseId }: { module: CourseModule; courseI
     const cache = await caches.open('moodle-files')
     await cache.delete(file.fileurl)
     setCachedUrl(null)
+    const { getOfflineCourse, saveCourseOffline } = await import('../../db')
+    const course = await getOfflineCourse(courseId)
+    if (course) {
+      await saveCourseOffline({ ...course, fullyDownloaded: false })
+    }
     if (!isOnline) navigate(`/courses/${routeCourseId}`)
   }
 

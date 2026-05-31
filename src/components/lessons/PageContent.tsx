@@ -59,6 +59,11 @@ export const PageContent = ({ module, courseId }: { module: CourseModule; course
     const handleDelete = async () => {
       await deleteOfflineLesson(module.id)
       setIsSaved(false)
+      const { getOfflineCourse, saveCourseOffline } = await import('../../db')
+      const course = await getOfflineCourse(courseId)
+      if (course) {
+        await saveCourseOffline({ ...course, fullyDownloaded: false })
+      }
       if (!isOnline) navigate(`/courses/${courseId}`)
     }
   

@@ -93,6 +93,11 @@ export const ForumPage = () => {
     const { deleteOfflineLesson } = await import('../db')
     await deleteOfflineLesson(Number(moduleId))
     setIsSaved(false)
+    const { getOfflineCourse, saveCourseOffline } = await import('../db')
+    const course = await getOfflineCourse(Number(courseId))
+    if (course) {
+      await saveCourseOffline({ ...course, fullyDownloaded: false })
+    }
     if (!isOnline) navigate(`/courses/${courseId}`)
   }
 
