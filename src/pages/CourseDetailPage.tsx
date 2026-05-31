@@ -91,7 +91,7 @@ const ModuleItem = ({
           <span className="text-sm text-gray-700 dark:text-gray-300 leading-snug">
             {module.name}
           </span>
-          {isSaved && (
+          {(isSaved || module.modname === 'url') && (
             <span className="text-xs px-1.5 py-0.5 rounded-full shrink-0
               bg-green-100 text-green-700
               dark:bg-green-900 dark:text-green-300"
