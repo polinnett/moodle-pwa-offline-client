@@ -5,7 +5,7 @@ interface IconProps {
 }
 
 export const Icon = ({ name, size = 20, className = '' }: IconProps) => {
-  const src = new URL(`../assets/${name}.svg`, import.meta.url).href
+  const src = new URL(`../../assets/${name}.svg`, import.meta.url).href
 
   return (
     <img
