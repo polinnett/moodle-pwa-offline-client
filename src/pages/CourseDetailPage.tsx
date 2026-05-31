@@ -212,34 +212,71 @@ const DownloadButton = ({
     if (module.modname === 'resource') {
       const file = module.contents?.[0]
       if (!file?.fileurl) return
-      const url = `${proxyUrl(file.fileurl)}&token=${token}`
+      const proxied = proxyUrl(file.fileurl)
+      const url = `${proxied}&token=${token}`
       const res = await fetch(url)
       const blob = await res.blob()
       const mimeType = file.mimetype === 'video/mp4' ? 'video/mp4' : 'application/pdf'
       const cacheName = file.mimetype === 'video/mp4' ? 'moodle-videos' : 'moodle-files'
       const cache = await caches.open(cacheName)
-      await cache.put(file.fileurl, new Response(blob, { headers: { 'Content-Type': mimeType } }))
+      
+      if (file.mimetype === 'video/mp4') {
+        await cache.put(url, new Response(blob, { headers: { 'Content-Type': mimeType } }))
+      } else {
+        await cache.put(file.fileurl, new Response(blob, { headers: { 'Content-Type': mimeType } }))
+      }
       return
     }
 
     if (module.modname === 'book') {
       const chapters = module.contents?.filter(c => c.filename === 'index.html') ?? []
-      const htmlParts: string[] = []
-      for (const ch of chapters) {
+      const { saveLessonOffline } = await import('../db')
+      
+      for (let i = 0; i < chapters.length; i++) {
+        const ch = chapters[i]
         if (!ch.fileurl) continue
-        const url = `${proxyUrl(ch.fileurl)}?token=${token}`
+        const cleanUrl = ch.fileurl
+          .replace('http://localhost:8000', '/moodle-api')
+          .replace('?forcedownload=1', '')
+        const url = `${cleanUrl}?token=${token}`
         const res = await fetch(url)
         const html = await res.text()
-        htmlParts.push(html)
+        await saveLessonOffline({
+          id: module.id * 1000 + i, courseId,
+          name: `${module.name}_chapter_${i}`,
+          html, savedAt: Date.now(),
+        })
       }
-      const { saveLessonOffline } = await import('../db')
-      await saveLessonOffline({ id: module.id, courseId, name: module.name, html: htmlParts.join(''), savedAt: Date.now() })
+      await saveLessonOffline({
+        id: module.id, courseId, name: module.name,
+        html: String(chapters.length), savedAt: Date.now(),
+      })
       return
     }
 
     if (module.modname === 'url' || module.modname === 'forum') {
       const { saveLessonOffline } = await import('../db')
       await saveLessonOffline({ id: module.id, courseId, name: module.name, html: '', savedAt: Date.now() })
+    }
+
+    if (module.modname === 'forum') {
+      const { saveLessonOffline } = await import('../db')
+      try {
+        const { getForumsByCourse, getForumDiscussions } = await import('../api/moodle')
+        const forums = await getForumsByCourse(courseId)
+        const found = forums.find((f: { cmid: number }) => f.cmid === module.id)
+        if (found) {
+          const discussions = await getForumDiscussions(found.id)
+          await saveLessonOffline({
+            id: module.id, courseId, name: module.name,
+            html: JSON.stringify({ intro: found.intro ?? '', discussions }),
+            savedAt: Date.now(),
+          })
+          return
+        }
+      } catch {}
+      await saveLessonOffline({ id: module.id, courseId, name: module.name, html: '', savedAt: Date.now() })
+      return
     }
   }
 
