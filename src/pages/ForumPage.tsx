@@ -4,6 +4,7 @@ import { Layout } from '../components/Layout'
 import { getForumsByCourse, getForumDiscussions } from '../api/moodle'
 import { useOfflineStatus } from '../hooks/useOfflineStatus'
 import { getOfflineLesson } from '../db'
+import { Icon } from '../components/Icon'
 
 interface Discussion {
   id: number
@@ -114,8 +115,11 @@ export const ForumPage = () => {
           bg-white dark:bg-gray-800
           border border-green-100 dark:border-gray-700"
         >
-          <p className="font-medium text-gray-700 dark:text-gray-300">
-            {!navigator.onLine ? 'Форум не скачан для офлайна' : 'Не удалось загрузить форум'}
+          <div className="flex justify-center mb-3">
+            <Icon name="default" size={48} />
+          </div>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            {!navigator.onLine ? 'Форум не сохранен для офлайна' : 'Не удалось загрузить форум'}
           </p>
         </div>
       </Layout>
