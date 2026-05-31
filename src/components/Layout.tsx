@@ -86,13 +86,13 @@ export const Layout = ({ children, title, showBack = false }: LayoutProps) => {
           <div className="flex-1"/>
 
           <div className="hidden md:flex items-center gap-2">
-            <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium
+            <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium
               ${isOnline
                 ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
                 : 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400'
               }`}
             >
-              <div className={`w-1.5 h-1.5 rounded-full ${isOnline ? 'bg-green-500' : 'bg-red-500'}`}/>
+              <div className={`w-1.5 h-1.5 rounded-lg ${isOnline ? 'bg-green-500' : 'bg-red-500'}`}/>
               {isOnline ? 'Онлайн' : 'Офлайн'}
             </div>
             <ThemeToggle />

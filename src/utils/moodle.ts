@@ -33,3 +33,12 @@ export const ensureCourseStructure = async (
     console.error("Failed to ensure course structure:", error);
   }
 };
+
+export const fixImageUrls = (html: string): string => {
+  const token = localStorage.getItem("moodle_token");
+  return html.replace(/src="(http:\/\/localhost:8000[^"]+)"/g, (_, url) => {
+    const proxied = url.replace("http://localhost:8000", "/moodle-api");
+    const separator = proxied.includes("?") ? "&" : "?";
+    return `src="${proxied}${separator}token=${token}"`;
+  });
+};

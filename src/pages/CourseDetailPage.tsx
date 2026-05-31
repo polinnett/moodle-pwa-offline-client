@@ -9,6 +9,7 @@ import type { CourseSection, CourseModule, OfflineCourse } from '../types'
 import { Icon } from '../components/Icon'
 import { OfflineBadge } from '../components/OfflineBadge'
 import { OnlineOnlyBadge } from '../components/OnlineOnlyBadge'
+import { fixImageUrls } from '../utils/moodle'
 
 const ModuleIcon = ({ modname }: { modname: string }) => {
   const icons: Record<string, string> = {
@@ -99,8 +100,9 @@ const ModuleItem = ({
           {module.modname === 'quiz' && <OnlineOnlyBadge />}
         </div>
         {module.description && (
-          <p
-            className="text-xs text-gray-400 dark:text-gray-500 mt-0.5 leading-relaxed"
+          <div
+            className="text-xs text-gray-400 dark:text-gray-500 mt-0.5 leading-relaxed
+              [&_img]:max-h-20 [&_img]:max-w-full [&_img]:object-cover [&_img]:rounded-lg [&_img]:mt-1 [&_img]:opacity-70"
             dangerouslySetInnerHTML={{ __html: module.description }}
           />
         )}
@@ -150,12 +152,13 @@ const SectionBlock = ({
         </div>
       )}
 
-      {section.summary && section.summary.replace(/<[^>]*>/g, '').trim() && (
+      {section.summary && section.summary.trim() && (
         <div
           className="px-4 py-3 text-sm text-gray-800 dark:text-white
             border-b border-green-200 dark:border-gray-700
-            leading-relaxed"
-          dangerouslySetInnerHTML={{ __html: section.summary }}
+            leading-relaxed
+            [&_img]:max-h-30 [&_img]:max-w-full [&_img]:object-cover [&_img]:rounded-lg [&_img]:mt-1 [&_img]:opacity-70"
+          dangerouslySetInnerHTML={{ __html: fixImageUrls(section.summary) }}
         />
       )}
 
