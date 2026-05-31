@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import type { CourseModule } from '../../types'
 import { ensureCourseStructure, fileUrl } from '../../utils/moodle';
+import { useOfflineStatus } from '../../hooks/useOfflineStatus';
 import { Icon } from '../Icon'
 import { ModuleDescription } from '../ModuleDescription';
 import { DownloadIcon } from '../DownloadIcon';
@@ -18,6 +20,9 @@ export const VideoContent = ({ module, courseId }: { module: CourseModule; cours
     const [caching, setCaching] = useState(false)
     const [cacheProgress, setCacheProgress] = useState(0)
     const [extractingAudio, setExtractingAudio] = useState(false)
+    const isOnline = useOfflineStatus()
+    const navigate = useNavigate()
+    const { courseId: routeCourseId } = useParams()
   
     useEffect(() => {
       const checkCache = async () => {
@@ -30,6 +35,24 @@ export const VideoContent = ({ module, courseId }: { module: CourseModule; cours
       }
       checkCache()
     }, [videoSrc])
+
+    if (!isOnline && !cachedUrl) {
+      return (
+        <div className="space-y-4">
+          <div className="rounded-2xl p-6 text-center
+            bg-white dark:bg-gray-800
+            border border-green-100 dark:border-gray-700"
+          >
+            <div className="flex justify-center mb-3">
+              <Icon name="default" size={48} />
+            </div>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Видео не сохранено для офлайна
+            </p>
+          </div>
+        </div>
+      )
+    }
   
     const handleSaveOffline = async () => {
       await ensureCourseStructure(courseId)
@@ -70,6 +93,7 @@ export const VideoContent = ({ module, courseId }: { module: CourseModule; cours
       const cache = await caches.open('moodle-videos')
       await cache.delete(videoSrc)
       setCachedUrl(null)
+      if (!isOnline) navigate(`/courses/${routeCourseId}`)
     }
   
     const handleExtractAudio = async () => {
@@ -131,36 +155,42 @@ export const VideoContent = ({ module, courseId }: { module: CourseModule; cours
               />
             </div>
           )}
+
+          {isOnline && (
+            <a
+              href={videoSrc}
+              download={videoFile.filename}
+              className="flex items-center gap-3 px-4 py-3 rounded-xl transition-colors cursor-pointer bg-green-50 hover:bg-green-100 dark:bg-gray-700 dark:hover:bg-gray-600"
+            >
+              <Icon name="video" size={20} />
+              <div className="flex-1">
+                <p className="text-sm font-medium text-gray-800 dark:text-white">Скачать на устройство</p>
+                <p className="text-xs text-gray-400">{fileSizeMb} МБ • MP4</p>
+              </div>
+              <DownloadIcon />
+            </a>
+          )}
   
-          <a
-            href={videoSrc}
-            download={videoFile.filename}
-            className="flex items-center gap-3 px-4 py-3 rounded-xl transition-colors cursor-pointer bg-green-50 hover:bg-green-100 dark:bg-gray-700 dark:hover:bg-gray-600"
-          >
-            <Icon name="video" size={20} />
-            <div className="flex-1">
-              <p className="text-sm font-medium text-gray-800 dark:text-white">Скачать на устройство</p>
-              <p className="text-xs text-gray-400">{fileSizeMb} МБ • MP4</p>
-            </div>
-            <DownloadIcon />
-          </a>
-  
-          <button
-            onClick={handleExtractAudio}
-            disabled={extractingAudio}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors cursor-pointer bg-green-50 hover:bg-green-100 dark:bg-gray-700 dark:hover:bg-gray-600 disabled:opacity-50"
-          >
-            <Icon name="audio" size={20} />
-            <div className="flex-1 text-left">
-              <p className="text-sm font-medium text-gray-800 dark:text-white">
-                {extractingAudio ? 'Извлекаем аудио...' : 'Скачать аудио'}
-              </p>
-              <p className="text-xs text-gray-400">Только звук • MP3</p>
-            </div>
-            {!extractingAudio && <DownloadIcon />}
-          </button>
-  
-          <TranscribeButton videoUrl={videoSrc} videoName={module.name} />
+          {isOnline && (
+            <button
+              onClick={handleExtractAudio}
+              disabled={extractingAudio}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors cursor-pointer bg-green-50 hover:bg-green-100 dark:bg-gray-700 dark:hover:bg-gray-600 disabled:opacity-50"
+            >
+              <Icon name="audio" size={20} />
+              <div className="flex-1 text-left">
+                <p className="text-sm font-medium text-gray-800 dark:text-white">
+                  {extractingAudio ? 'Извлекаем аудио...' : 'Скачать аудио'}
+                </p>
+                <p className="text-xs text-gray-400">Только звук • MP3</p>
+              </div>
+              {!extractingAudio && <DownloadIcon />}
+            </button>
+          )}
+
+          {isOnline && (
+            <TranscribeButton videoUrl={videoSrc} videoName={module.name} />
+          )}
         </div>
       </div>
     )

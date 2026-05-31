@@ -76,7 +76,7 @@ export const LessonPage = () => {
       case 'page':  return <PageContent module={module} courseId={id} />
       case 'video': return <VideoContent module={module} courseId={id} />
       case 'quiz':  return <QuizContent />
-      case 'url':   return <UrlContent module={module} courseId={id} />
+      case 'url':   return <UrlContent module={module} />
       case 'pdf': return <PdfContent module={module} courseId={id} />
       case 'book': return <BookContent module={module} courseId={id} />
       default:      return <UnsupportedContent module={module} />

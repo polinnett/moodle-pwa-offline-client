@@ -43,8 +43,10 @@ const ModuleItem = ({
 
       const videoFile = module.contents?.find(c => c.mimetype === 'video/mp4')
       if (videoFile?.fileurl) {
+        const token = localStorage.getItem('moodle_token')
+        const proxiedUrl = `${videoFile.fileurl.replace('http://localhost:8000', '/moodle-api')}&token=${token}`
         const cache = await caches.open('moodle-videos')
-        const match = await cache.match(videoFile.fileurl)
+        const match = await cache.match(proxiedUrl)
         if (match) { setIsSaved(true); return }
       }
 
