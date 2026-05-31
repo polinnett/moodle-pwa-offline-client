@@ -12,6 +12,32 @@ import { Icon } from '../components/Icon'
 import { DownloadIcon } from '../components/DownloadIcon'
 import { ModuleDescription } from '../components/ModuleDescription'
 
+const ensureCourseStructure = async (courseId: number) => {
+  if (!courseId) return
+  const existing = await import('../db').then(db => db.getOfflineCourse(courseId))
+  if (existing) return
+  
+  try {
+    const { getCourseContents } = await import('../api/moodle')
+    const { saveCourseOffline } = await import('../db')
+    const { getMyCourses } = await import('../api/moodle')
+    
+    const [sections, courses] = await Promise.all([
+      getCourseContents(courseId),
+      getMyCourses(),
+    ])
+    const course = courses.find((c: { id: number }) => c.id === courseId)
+    
+    await saveCourseOffline({
+      id: courseId,
+      fullname: course?.fullname ?? '',
+      shortname: course?.shortname ?? '',
+      downloadedAt: Date.now(),
+      sections,
+    })
+  } catch {}
+}
+
 const proxyUrl = (url: string) =>
   url.replace('http://localhost:8000', '/moodle-api')
 
@@ -55,6 +81,7 @@ const PageContent = ({ module, courseId }: { module: CourseModule; courseId: num
   const handleSave = async () => {
     setSaving(true)
     try {
+      await ensureCourseStructure(courseId)
       await saveLessonOffline({
         id: module.id,
         courseId,
@@ -373,7 +400,7 @@ const TranscribeButton = ({ videoUrl, videoName }: { videoUrl: string; videoName
   )
 }
 
-const VideoContent = ({ module }: { module: CourseModule }) => {
+const VideoContent = ({ module, courseId }: { module: CourseModule; courseId: number }) => {
   const videoFile = module.contents?.find(c => c.mimetype === 'video/mp4')
   if (!videoFile) return null
 
@@ -398,6 +425,7 @@ const VideoContent = ({ module }: { module: CourseModule }) => {
   }, [videoSrc])
 
   const handleSaveOffline = async () => {
+    await ensureCourseStructure(courseId)
     setCaching(true)
     setCacheProgress(0)
     try {
@@ -561,7 +589,7 @@ const UnsupportedContent = ({ module }: { module: CourseModule }) => (
   </div>
 )
 
-const UrlContent = ({ module }: { module: CourseModule }) => {
+const UrlContent = ({ module, courseId }: { module: CourseModule; courseId: number }) => {
   const url = module.contents?.[0]?.fileurl
   const [isSaved, setIsSaved] = useState(false)
   const isOnline = useOfflineStatus()
@@ -571,6 +599,7 @@ const UrlContent = ({ module }: { module: CourseModule }) => {
   }, [module.id])
 
   const handleSave = async () => {
+    await ensureCourseStructure(courseId)
     const { saveLessonOffline } = await import('../db')
     await saveLessonOffline({
       id: module.id,
@@ -651,7 +680,7 @@ const UrlContent = ({ module }: { module: CourseModule }) => {
   )
 }
 
-const PdfContent = ({ module }: { module: CourseModule }) => {
+const PdfContent = ({ module, courseId }: { module: CourseModule; courseId: number }) => {
   const token = localStorage.getItem('moodle_token')
   const isOnline = useOfflineStatus()
   const file = module.contents?.[0]
@@ -680,6 +709,7 @@ const PdfContent = ({ module }: { module: CourseModule }) => {
   const fileSizeMb = (file.filesize / 1024 / 1024).toFixed(2)
 
   const handleSaveOffline = async () => {
+    await ensureCourseStructure(courseId)
     if (!file.fileurl) return
     setCaching(true)
     setCacheProgress(0)
@@ -807,7 +837,7 @@ const PdfContent = ({ module }: { module: CourseModule }) => {
   )
 }
 
-const BookContent = ({ module }: { module: CourseModule }) => {
+const BookContent = ({ module, courseId }: { module: CourseModule; courseId: number }) => {
   const token = localStorage.getItem('moodle_token')
   const [chapters, setChapters] = useState<{ title: string; fileurl: string }[]>([])
   const [currentChapter, setCurrentChapter] = useState(0)
@@ -837,38 +867,76 @@ const BookContent = ({ module }: { module: CourseModule }) => {
     if (chapters.length === 0) return
     const chapter = chapters[currentChapter]
     if (!chapter?.fileurl) return
-
+  
     setLoading(true)
-    const url = `${chapter.fileurl.replace('http://localhost:8000', '/moodle-api')}?token=${token}`
-    fetch(url)
-      .then(r => r.text())
-      .then(text => { setHtml(text); setLoading(false) })
-      .catch(() => setLoading(false))
-  }, [chapters, currentChapter, token])
+  
+    getOfflineLesson(module.id).then(async saved => {
+      if (saved?.html) {
+        const chapterCount = parseInt(saved.html)
+        if (!isNaN(chapterCount)) {
+          const { getOfflineLesson: getLesson } = await import('../db')
+          const chapterData = await getLesson(module.id * 1000 + currentChapter)
+          if (chapterData?.html) {
+            setHtml(chapterData.html)
+            setLoading(false)
+            return
+          }
+        }
+      }
+    
+      const cleanUrl = chapter.fileurl
+        .replace('http://localhost:8000', '/moodle-api')
+        .replace('?forcedownload=1', '')
+      const url = `${cleanUrl}?token=${token}`
+      fetch(url)
+        .then(r => r.text())
+        .then(text => { setHtml(text); setLoading(false) })
+        .catch(() => setLoading(false))
+    })
+  }, [chapters, currentChapter, token, module.id])
 
   const handleSave = async () => {
     const { saveLessonOffline } = await import('../db')
-    const chapters2 = module.contents?.filter(c => c.filename === 'index.html') ?? []
-    const htmlParts: string[] = []
-    for (const ch of chapters2) {
+    const chapterFiles = module.contents?.filter(c => c.filename === 'index.html') ?? []
+    
+    for (let i = 0; i < chapterFiles.length; i++) {
+      const ch = chapterFiles[i]
       if (!ch.fileurl) continue
-      const url = `${ch.fileurl.replace('http://localhost:8000', '/moodle-api')}?token=${token}`
+      const cleanUrl = ch.fileurl
+        .replace('http://localhost:8000', '/moodle-api')
+        .replace('?forcedownload=1', '')
+      const url = `${cleanUrl}?token=${token}`
       const res = await fetch(url)
-      const text = await res.text()
-      htmlParts.push(text)
+      const html = await res.text()
+      await saveLessonOffline({
+        id: module.id * 1000 + i,
+        courseId: 0,
+        name: `${module.name}_chapter_${i}`,
+        html,
+        savedAt: Date.now(),
+      })
     }
     await saveLessonOffline({
       id: module.id,
       courseId: 0,
       name: module.name,
-      html: htmlParts.join(''),
+      html: String(chapterFiles.length),
       savedAt: Date.now(),
     })
     setIsSaved(true)
   }
 
   const handleDelete = async () => {
-    const { deleteOfflineLesson } = await import('../db')
+    const { deleteOfflineLesson, getOfflineLesson: getLesson } = await import('../db')
+    const saved = await getLesson(module.id)
+    if (saved?.html) {
+      const chapterCount = parseInt(saved.html)
+      if (!isNaN(chapterCount)) {
+        for (let i = 0; i < chapterCount; i++) {
+          await deleteOfflineLesson(module.id * 1000 + i)
+        }
+      }
+    }
     await deleteOfflineLesson(module.id)
     setIsSaved(false)
   }
@@ -1051,11 +1119,11 @@ export const LessonPage = () => {
     if (!module) return null
     switch (getModuleType(module)) {
       case 'page':  return <PageContent module={module} courseId={id} />
-      case 'video': return <VideoContent module={module} />
+      case 'video': return <VideoContent module={module} courseId={id} />
       case 'quiz':  return <QuizContent />
-      case 'url':   return <UrlContent module={module} />
-      case 'pdf': return <PdfContent module={module} />
-      case 'book': return <BookContent module={module} />
+      case 'url':   return <UrlContent module={module} courseId={id} />
+      case 'pdf': return <PdfContent module={module} courseId={id} />
+      case 'book': return <BookContent module={module} courseId={id} />
       default:      return <UnsupportedContent module={module} />
     }
   }
