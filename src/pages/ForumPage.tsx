@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import { Layout } from '../components/Layout'
 import { getForumsByCourse, getForumDiscussions } from '../api/moodle'
+import { useOfflineStatus } from '../hooks/useOfflineStatus'
+import { getOfflineLesson } from '../db'
 
 interface Discussion {
   id: number
@@ -26,6 +28,12 @@ export const ForumPage = () => {
   const [discussions, setDiscussions] = useState<Discussion[]>([])
   const [selected, setSelected] = useState<Discussion | null>(null)
   const [status, setStatus] = useState<'loading' | 'ok' | 'error'>('loading')
+  const [isSaved, setIsSaved] = useState(false)
+  const isOnline = useOfflineStatus()
+
+  useEffect(() => {
+    getOfflineLesson(Number(moduleId)).then(l => setIsSaved(!!l))
+  }, [moduleId])
 
   useEffect(() => {
     const init = async () => {
@@ -38,11 +46,40 @@ export const ForumPage = () => {
         setDiscussions(disc)
         setStatus('ok')
       } catch {
-        setStatus('error')
+        try {
+          const saved = await getOfflineLesson(Number(moduleId))
+          if (saved) {
+            setForum({ id: 0, name: saved.name, intro: '', numdiscussions: 0, cmid: Number(moduleId) })
+            setDiscussions([])
+            setStatus('ok')
+          } else {
+            setStatus('error')
+          }
+        } catch {
+          setStatus('error')
+        }
       }
     }
     init()
   }, [courseId, moduleId])
+
+  const handleSave = async () => {
+    const { saveLessonOffline } = await import('../db')
+    await saveLessonOffline({
+      id: Number(moduleId),
+      courseId: Number(courseId),
+      name: forum?.name ?? '',
+      html: '',
+      savedAt: Date.now(),
+    })
+    setIsSaved(true)
+  }
+
+  const handleDelete = async () => {
+    const { deleteOfflineLesson } = await import('../db')
+    await deleteOfflineLesson(Number(moduleId))
+    setIsSaved(false)
+  }
 
   if (status === 'loading') {
     return (
@@ -115,6 +152,40 @@ export const ForumPage = () => {
   return (
     <Layout title={forum?.name ?? 'Форум'} showBack>
       <div className="space-y-4">
+        <div className="flex justify-end">
+            {isOnline && (
+              isSaved ? (
+                <button
+                  onClick={handleDelete}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm
+                    font-medium cursor-pointer transition-colors
+                    bg-green-100 text-green-700 hover:bg-red-100 hover:text-red-600
+                    dark:bg-green-900 dark:text-green-300
+                    dark:hover:bg-red-900/30 dark:hover:text-red-400"
+                >
+                  <span>Удалить</span>
+                </button>
+              ) : (
+                <button
+                  onClick={handleSave}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm
+                    font-medium cursor-pointer transition-colors
+                    bg-green-500 text-white hover:bg-green-600
+                    dark:bg-green-600 dark:hover:bg-green-500
+                    disabled:opacity-50"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                    viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="7 10 12 15 17 10"/>
+                    <line x1="12" y1="15" x2="12" y2="3"/>
+                  </svg>
+                  Сохранить
+                </button>
+              )
+            )}
+        </div>    
 
         {forum?.intro && forum.intro.replace(/<[^>]*>/g, '').trim() && (
           <div
@@ -130,7 +201,9 @@ export const ForumPage = () => {
           bg-white dark:bg-gray-800
           border border-green-200 dark:border-gray-700"
         >
-          <div className="px-4 py-3 border-b border-green-200 dark:border-gray-700">
+          <div className="px-4 py-3 border-b border-green-200 dark:border-gray-700
+            flex items-center justify-between"
+          >
             <h2 className="font-bold text-gray-900 dark:text-white">
               Обсуждения
             </h2>
@@ -138,7 +211,7 @@ export const ForumPage = () => {
 
           {discussions.length === 0 ? (
             <div className="px-4 py-8 text-center text-sm text-gray-400 dark:text-gray-500">
-              Нет обсуждений
+              {!navigator.onLine ? 'Обсуждения недоступны офлайн' : 'Нет обсуждений'}
             </div>
           ) : (
             discussions.map(disc => (

@@ -12,7 +12,6 @@ import { Icon } from '../components/Icon'
 import { DownloadIcon } from '../components/DownloadIcon'
 import { ModuleDescription } from '../components/ModuleDescription'
 
-
 const proxyUrl = (url: string) =>
   url.replace('http://localhost:8000', '/moodle-api')
 
@@ -564,10 +563,69 @@ const UnsupportedContent = ({ module }: { module: CourseModule }) => (
 
 const UrlContent = ({ module }: { module: CourseModule }) => {
   const url = module.contents?.[0]?.fileurl
+  const [isSaved, setIsSaved] = useState(false)
+  const isOnline = useOfflineStatus()
+
+  useEffect(() => {
+    getOfflineLesson(module.id).then(l => setIsSaved(!!l))
+  }, [module.id])
+
+  const handleSave = async () => {
+    const { saveLessonOffline } = await import('../db')
+    await saveLessonOffline({
+      id: module.id,
+      courseId: 0,
+      name: module.name,
+      html: '',
+      savedAt: Date.now(),
+    })
+    setIsSaved(true)
+  }
+
+  const handleDelete = async () => {
+    const { deleteOfflineLesson } = await import('../db')
+    await deleteOfflineLesson(module.id)
+    setIsSaved(false)
+  }
 
   return (
     <div className="space-y-4">
+      <div className="flex justify-end">
+        {isOnline && (
+          isSaved ? (
+            <button
+              onClick={handleDelete}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm
+                font-medium cursor-pointer transition-colors
+                bg-green-100 text-green-700 hover:bg-red-100 hover:text-red-600
+                dark:bg-green-900 dark:text-green-300
+                dark:hover:bg-red-900/30 dark:hover:text-red-400"
+            >
+              <span>Удалить</span>
+            </button>
+          ) : (
+            <button
+              onClick={handleSave}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm
+                font-medium cursor-pointer transition-colors
+                bg-green-500 text-white hover:bg-green-600
+                dark:bg-green-600 dark:hover:bg-green-500"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="7 10 12 15 17 10"/>
+                <line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+              Сохранить
+            </button>
+          )
+        )}
+      </div>
+
       <ModuleDescription description={module.description} />
+
       <div className="rounded-2xl p-6
         bg-white dark:bg-gray-800
         border border-green-100 dark:border-gray-700"
@@ -755,20 +813,23 @@ const BookContent = ({ module }: { module: CourseModule }) => {
   const [currentChapter, setCurrentChapter] = useState(0)
   const [html, setHtml] = useState('')
   const [loading, setLoading] = useState(true)
+  const [isSaved, setIsSaved] = useState(false)
+  const isOnline = useOfflineStatus()
+
+  useEffect(() => {
+    getOfflineLesson(module.id).then(l => setIsSaved(!!l))
+  }, [module.id])
 
   useEffect(() => {
     const structureContent = module.contents?.find(c => c.filename === 'structure')
     if (!structureContent?.content) return
 
     const structure = JSON.parse(structureContent.content) as { title: string; href: string }[]
-    
     const chapterFiles = module.contents?.filter(c => c.filename === 'index.html') ?? []
-    
     const parsed = structure.map((s, i) => ({
       title: s.title,
       fileurl: chapterFiles[i]?.fileurl ?? '',
     }))
-
     setChapters(parsed)
   }, [module])
 
@@ -785,8 +846,70 @@ const BookContent = ({ module }: { module: CourseModule }) => {
       .catch(() => setLoading(false))
   }, [chapters, currentChapter, token])
 
+  const handleSave = async () => {
+    const { saveLessonOffline } = await import('../db')
+    const chapters2 = module.contents?.filter(c => c.filename === 'index.html') ?? []
+    const htmlParts: string[] = []
+    for (const ch of chapters2) {
+      if (!ch.fileurl) continue
+      const url = `${ch.fileurl.replace('http://localhost:8000', '/moodle-api')}?token=${token}`
+      const res = await fetch(url)
+      const text = await res.text()
+      htmlParts.push(text)
+    }
+    await saveLessonOffline({
+      id: module.id,
+      courseId: 0,
+      name: module.name,
+      html: htmlParts.join(''),
+      savedAt: Date.now(),
+    })
+    setIsSaved(true)
+  }
+
+  const handleDelete = async () => {
+    const { deleteOfflineLesson } = await import('../db')
+    await deleteOfflineLesson(module.id)
+    setIsSaved(false)
+  }
+
   return (
     <div className="space-y-4">
+
+      <div className="flex justify-end">
+        {isOnline && (
+          isSaved ? (
+            <button
+              onClick={handleDelete}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm
+                font-medium cursor-pointer transition-colors
+                bg-green-100 text-green-700 hover:bg-red-100 hover:text-red-600
+                dark:bg-green-900 dark:text-green-300
+                dark:hover:bg-red-900/30 dark:hover:text-red-400"
+            >
+              <span>Удалить</span>
+            </button>
+          ) : (
+            <button
+              onClick={handleSave}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm
+                font-medium cursor-pointer transition-colors
+                bg-green-500 text-white hover:bg-green-600
+                dark:bg-green-600 dark:hover:bg-green-500"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="7 10 12 15 17 10"/>
+                <line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+              Сохранить
+            </button>
+          )
+        )}
+      </div>
+
       {chapters.length > 1 && (
         <div className="rounded-2xl overflow-hidden
           bg-white dark:bg-gray-800
@@ -811,7 +934,9 @@ const BookContent = ({ module }: { module: CourseModule }) => {
           ))}
         </div>
       )}
+
       <ModuleDescription description={module.description} />
+
       <div className="rounded-2xl p-5
         bg-white dark:bg-gray-800
         border border-green-100 dark:border-gray-700"
