@@ -9,6 +9,7 @@ import { LessonPage } from './pages/LessonPage'
 import { QuizPage } from './pages/QuizPage'
 import { HomePage } from './pages/HomePage'
 import { ForumPage } from './pages/ForumPage'
+import { ScrollRestoration } from './components/ScrollRestoration'
 
 const queryClient = new QueryClient()
 
@@ -17,28 +18,29 @@ function App() {
     <ThemeProvider>
       <QueryClientProvider client={queryClient}>
         <BrowserRouter>
-          <Routes>
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/courses" element={
-              <RequireAuth><CoursesPage /></RequireAuth>
-            } />
-            <Route path="/courses/:courseId" element={
-              <RequireAuth><CourseDetailPage /></RequireAuth>
-            } />
-            <Route path="/courses/:courseId/lessons/:moduleId" element={
-              <RequireAuth><LessonPage /></RequireAuth>
-            } />
-            <Route path="/courses/:courseId/quiz/:moduleId" element={
-              <RequireAuth><QuizPage /></RequireAuth>
-            } />
-            <Route path="/home" element={
-              <RequireAuth><HomePage /></RequireAuth>
-            } />
-            <Route path="/courses/:courseId/forum/:moduleId" element={
-              <RequireAuth><ForumPage /></RequireAuth>
-            } />
-            <Route path="/" element={<Navigate to="/login" replace />} />
-          </Routes>
+          <ScrollRestoration />
+            <Routes>
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/courses" element={
+                <RequireAuth><CoursesPage /></RequireAuth>
+              } />
+              <Route path="/courses/:courseId" element={
+                <RequireAuth><CourseDetailPage /></RequireAuth>
+              } />
+              <Route path="/courses/:courseId/lessons/:moduleId" element={
+                <RequireAuth><LessonPage /></RequireAuth>
+              } />
+              <Route path="/courses/:courseId/quiz/:moduleId" element={
+                <RequireAuth><QuizPage /></RequireAuth>
+              } />
+              <Route path="/home" element={
+                <RequireAuth><HomePage /></RequireAuth>
+              } />
+              <Route path="/courses/:courseId/forum/:moduleId" element={
+                <RequireAuth><ForumPage /></RequireAuth>
+              } />
+              <Route path="/" element={<Navigate to="/login" replace />} />
+            </Routes>
         </BrowserRouter>
       </QueryClientProvider>
     </ThemeProvider>
