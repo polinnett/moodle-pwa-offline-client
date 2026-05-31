@@ -198,10 +198,24 @@ const DownloadButton = ({
   const cacheModule = async (module: CourseModule) => {
     const { getOfflineLesson } = await import('../db')
     if (module.modname === 'page') {
+      const hasVideo = module.contents?.some(c => c.mimetype === 'video/mp4')
+      
+      if (hasVideo) {
+        const videoFile = module.contents?.find(c => c.mimetype === 'video/mp4')
+        if (!videoFile?.fileurl) return
+        const proxied = proxyUrl(videoFile.fileurl)
+        const url = `${proxied}&token=${token}`
+        const existing = await caches.open('moodle-videos').then(c => c.match(url))
+        if (existing) return
+        const res = await fetch(url)
+        const blob = await res.blob()
+        const cache = await caches.open('moodle-videos')
+        await cache.put(url, new Response(blob, { headers: { 'Content-Type': 'video/mp4' } }))
+        return
+      }
+    
       const existing = await getOfflineLesson(module.id)
       if (existing) return
-      const hasVideo = module.contents?.some(c => c.mimetype === 'video/mp4')
-      if (hasVideo) return
       const htmlFile = module.contents?.find(c => c.filename === 'index.html')
       if (!htmlFile?.fileurl) return
       const url = `${proxyUrl(htmlFile.fileurl)}&token=${token}`
