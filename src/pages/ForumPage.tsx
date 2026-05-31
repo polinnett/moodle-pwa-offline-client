@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import { Layout } from '../components/Layout'
 import { getForumsByCourse, getForumDiscussions } from '../api/moodle'
 import { useOfflineStatus } from '../hooks/useOfflineStatus'
@@ -46,39 +46,53 @@ export const ForumPage = () => {
         setDiscussions(disc)
         setStatus('ok')
       } catch {
-        try {
-          const saved = await getOfflineLesson(Number(moduleId))
-          if (saved) {
-            setForum({ id: 0, name: saved.name, intro: '', numdiscussions: 0, cmid: Number(moduleId) })
-            setDiscussions([])
-            setStatus('ok')
-          } else {
+          try {
+            const saved = await getOfflineLesson(Number(moduleId))
+            if (saved) {
+              try {
+                const parsed = JSON.parse(saved.html)
+                if (parsed.discussions && Array.isArray(parsed.discussions)) {
+                  setDiscussions(parsed.discussions)
+                  setForum({ id: 0, name: saved.name, intro: parsed.intro ?? '', numdiscussions: 0, cmid: Number(moduleId) })
+                } else if (Array.isArray(parsed)) {
+                  setDiscussions(parsed)
+                  setForum({ id: 0, name: saved.name, intro: '', numdiscussions: 0, cmid: Number(moduleId) })
+                }
+              } catch {}
+              setStatus('ok')
+            } else {
+              setStatus('error')
+            }
+          } catch {
             setStatus('error')
           }
-        } catch {
-          setStatus('error')
         }
-      }
     }
     init()
   }, [courseId, moduleId])
 
   const handleSave = async () => {
     const { saveLessonOffline } = await import('../db')
+    const { ensureCourseStructure } = await import('../utils/moodle')
+    await ensureCourseStructure(Number(courseId))
+    
     await saveLessonOffline({
       id: Number(moduleId),
       courseId: Number(courseId),
       name: forum?.name ?? '',
-      html: '',
+      html: JSON.stringify({ intro: forum?.intro ?? '', discussions }),
       savedAt: Date.now(),
-    })
+    })    
     setIsSaved(true)
   }
+
+  const navigate = useNavigate()
 
   const handleDelete = async () => {
     const { deleteOfflineLesson } = await import('../db')
     await deleteOfflineLesson(Number(moduleId))
     setIsSaved(false)
+    if (!isOnline) navigate(`/courses/${courseId}`)
   }
 
   if (status === 'loading') {
@@ -101,7 +115,7 @@ export const ForumPage = () => {
           border border-green-100 dark:border-gray-700"
         >
           <p className="font-medium text-gray-700 dark:text-gray-300">
-            Не удалось загрузить форум
+            {!navigator.onLine ? 'Форум не скачан для офлайна' : 'Не удалось загрузить форум'}
           </p>
         </div>
       </Layout>
@@ -153,8 +167,7 @@ export const ForumPage = () => {
     <Layout title={forum?.name ?? 'Форум'} showBack>
       <div className="space-y-4">
         <div className="flex justify-end">
-            {isOnline && (
-              isSaved ? (
+              {isSaved ? (
                 <button
                   onClick={handleDelete}
                   className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm
@@ -165,7 +178,7 @@ export const ForumPage = () => {
                 >
                   <span>Удалить</span>
                 </button>
-              ) : (
+              ) : isOnline ? (
                 <button
                   onClick={handleSave}
                   className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm
@@ -183,8 +196,7 @@ export const ForumPage = () => {
                   </svg>
                   Сохранить
                 </button>
-              )
-            )}
+              ) : null}
         </div>    
 
         {forum?.intro && forum.intro.replace(/<[^>]*>/g, '').trim() && (
