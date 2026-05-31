@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom'
 import { useOfflineStatus } from '../../hooks/useOfflineStatus';
 import { getOfflineLesson, saveLessonOffline, deleteOfflineLesson } from '../../db'
 import type { CourseModule } from '../../types'
@@ -12,6 +13,7 @@ export const PageContent = ({ module, courseId }: { module: CourseModule; course
     const [saving, setSaving] = useState(false)
     const isOnline = useOfflineStatus()
     const token = localStorage.getItem('moodle_token')
+    const navigate = useNavigate()
   
     useEffect(() => {
       const load = async () => {
@@ -57,6 +59,7 @@ export const PageContent = ({ module, courseId }: { module: CourseModule; course
     const handleDelete = async () => {
       await deleteOfflineLesson(module.id)
       setIsSaved(false)
+      if (!isOnline) navigate(`/courses/${courseId}`)
     }
   
     if (loading) {
