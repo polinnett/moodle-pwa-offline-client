@@ -7,6 +7,8 @@ import { useOfflineStatus } from '../hooks/useOfflineStatus'
 import { Layout } from '../components/Layout'
 import type { CourseSection, CourseModule, OfflineCourse } from '../types'
 import { Icon } from '../components/Icon'
+import { OfflineBadge } from '../components/OfflineBadge'
+import { OnlineOnlyBadge } from '../components/OnlineOnlyBadge'
 
 const ModuleIcon = ({ modname }: { modname: string }) => {
   const icons: Record<string, string> = {
@@ -93,22 +95,8 @@ const ModuleItem = ({
           <span className="text-sm text-gray-700 dark:text-gray-300 leading-snug">
             {module.name}
           </span>
-          {(isSaved || module.modname === 'url') && (
-            <span className="text-xs px-1.5 py-0.5 rounded-full shrink-0
-              bg-green-100 text-green-700
-              dark:bg-green-900 dark:text-green-300"
-            >
-              Офлайн
-            </span>
-          )}
-          {module.modname === 'quiz' && (
-            <span className="text-xs px-1.5 py-0.5 rounded-full shrink-0
-              bg-yellow-100 text-yellow-700
-              dark:bg-yellow-900/30 dark:text-yellow-400"
-            >
-              Только онлайн
-            </span>
-          )}
+          {(isSaved || module.modname === 'url') && <OfflineBadge />}
+          {module.modname === 'quiz' && <OnlineOnlyBadge />}
         </div>
         {module.description && (
           <p
