@@ -84,7 +84,13 @@ export const VideoContent = ({ module, courseId }: { module: CourseModule; cours
           headers: { 'Content-Type': 'video/mp4' }
         }))
         setCachedUrl(URL.createObjectURL(blob))
-      } finally {
+      } catch (e) {
+        if (e instanceof DOMException && e.name === 'QuotaExceededError') {
+          alert('Недостаточно места в хранилище браузера. Удалите ненужные файлы.')
+        }
+        throw e
+      }
+        finally {
         setCaching(false)
       }
     }

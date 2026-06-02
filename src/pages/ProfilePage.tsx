@@ -26,10 +26,15 @@ export const ProfilePage = () => {
   const [loadingUsers, setLoadingUsers] = useState(false)
   const [storageInfo, setStorageInfo] = useState<{ used: number; quota: number } | null>(null)
   const [loading, setLoading] = useState(true)
+  const [lastActive, setLastActive] = useState<string | null>(null)
 
   useEffect(() => {
     const init = async () => {
       try {
+        const lastActiveStr = localStorage.getItem('last_active')
+        setLastActive(lastActiveStr)
+        localStorage.setItem('last_active', new Date().toISOString())
+
         const info = await getSiteInfo()
         setUserInfo(info)
   
@@ -68,6 +73,19 @@ export const ProfilePage = () => {
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} КБ`
     if (bytes < 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} МБ`
     return `${(bytes / 1024 / 1024 / 1024).toFixed(2)} ГБ`
+  }
+
+  const handleClearCache = async () => {
+    const keys = await caches.keys()
+    await Promise.all(keys.map(key => caches.delete(key)))
+    const { db } = await import('../db')
+    await db.courses.clear()
+    await db.lessons.clear()
+    const estimate = await navigator.storage.estimate()
+    setStorageInfo({
+      used: estimate.usage ?? 0,
+      quota: estimate.quota ?? 0,
+    })
   }
 
   if (loading) {
@@ -157,6 +175,15 @@ export const ProfilePage = () => {
                 {((storageInfo.used / storageInfo.quota) * 100).toFixed(1)}% использовано
               </p>
             </div>
+            <button
+            onClick={handleClearCache}
+            className="w-full py-2.5 rounded-xl text-sm font-medium
+                cursor-pointer transition-colors
+                text-white bg-red-500
+                hover:bg-red-50 mt-5"
+            >
+            Очистить весь кеш
+            </button>
           </div>
         )}
 
@@ -208,6 +235,17 @@ export const ProfilePage = () => {
                     {user.email}
                   </p>
                 </div>
+                {lastActive && (
+                <div className="flex justify-between text-sm">
+                    <span className="text-gray-500 dark:text-gray-400 mr-2">Последняя активность</span>
+                    <span className="text-gray-800 dark:text-white">
+                    {new Date(lastActive).toLocaleString('ru-RU', {
+                        day: '2-digit', month: '2-digit', year: 'numeric',
+                        hour: '2-digit', minute: '2-digit'
+                    })}
+                    </span>
+                </div>
+                )}
               </div>
             ))}
           </div>

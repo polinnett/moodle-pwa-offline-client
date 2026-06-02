@@ -78,6 +78,11 @@ export const PdfContent = ({ module, courseId }: { module: CourseModule; courseI
       const cache = await caches.open('moodle-files')
       await cache.put(file.fileurl, new Response(blob, { headers: { 'Content-Type': 'application/pdf' } }))
       setCachedUrl(URL.createObjectURL(blob))
+    } catch (e) {
+      if (e instanceof DOMException && e.name === 'QuotaExceededError') {
+        alert('Недостаточно места в хранилище браузера. Удалите ненужные файлы.')
+      }
+      throw e
     } finally {
       setCaching(false)
     }
