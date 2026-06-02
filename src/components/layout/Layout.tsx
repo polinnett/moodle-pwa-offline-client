@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { ThemeToggle } from './ThemeToggle'
 import { Logo } from '../ui/Logo'
 import { useOfflineStatus } from '../../hooks/useOfflineStatus'
+import { Icon } from '../ui/Icon'
 
 interface LayoutProps {
   children: React.ReactNode
@@ -97,19 +98,15 @@ export const Layout = ({ children, title, showBack = false }: LayoutProps) => {
             </div>
             <ThemeToggle />
             <button
-              onClick={handleLogout}
-              className="cursor-pointer p-1.5 rounded-lg transition-colors
-                text-gray-500 hover:text-red-500
-                dark:text-gray-400 dark:hover:text-red-400"
-              aria-label="Выйти"
+              onClick={() => navigate('/profile')}
+              className={`cursor-pointer p-1.5 rounded-lg transition-colors
+                ${location.pathname === '/profile'
+                  ? 'bg-green-100 text-green-600 dark:bg-green-900 dark:text-green-400'
+                  : 'text-gray-500 hover:text-green-600 dark:text-gray-400 dark:hover:text-green-400'
+                }`}
+              aria-label="Профиль"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22"
-                viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-                <polyline points="16 17 21 12 16 7"/>
-                <line x1="21" y1="12" x2="9" y2="12"/>
-              </svg>
+              <Icon name="profile" size={30} />
             </button>
           </div>
 
@@ -170,6 +167,18 @@ export const Layout = ({ children, title, showBack = false }: LayoutProps) => {
                 }`}
             >
               Курсы
+            </button>
+
+            <button
+              onClick={() => navigate('/profile')}
+              className={`w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium
+                cursor-pointer transition-colors
+                ${location.pathname === '/profile'
+                  ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300'
+                  : 'text-gray-600 hover:bg-green-50 dark:text-gray-400 dark:hover:bg-gray-700'
+                }`}
+            >
+              Профиль
             </button>
 
             <button

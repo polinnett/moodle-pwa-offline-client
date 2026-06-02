@@ -10,6 +10,7 @@ import { QuizPage } from './pages/QuizPage'
 import { HomePage } from './pages/HomePage'
 import { ForumPage } from './pages/ForumPage'
 import { ScrollRestoration } from './components/layout/ScrollRestoration'
+import { ProfilePage } from './pages/ProfilePage'
 
 const queryClient = new QueryClient()
 
@@ -38,6 +39,9 @@ function App() {
               } />
               <Route path="/courses/:courseId/forum/:moduleId" element={
                 <RequireAuth><ForumPage /></RequireAuth>
+              } />
+              <Route path="/profile" element={
+                <RequireAuth><ProfilePage /></RequireAuth>
               } />
               <Route path="/" element={<Navigate to="/login" replace />} />
             </Routes>

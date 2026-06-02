@@ -250,3 +250,15 @@ export const getForumDiscussions = async (forumId: number) => {
   });
   return res.data.discussions;
 };
+
+export const getSiteInfo = async () => {
+  const res = await ws("core_webservice_get_site_info", {});
+  return res.data;
+};
+
+export const getSystemUsers = async () => {
+  const res = await ws("core_enrol_get_enrolled_users", {
+    courseid: 1,
+  });
+  return res.data;
+};
