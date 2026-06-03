@@ -280,11 +280,12 @@ const DownloadButton = ({
       return
     }
 
-    if (module.modname === 'url' || module.modname === 'forum') {
+    if (module.modname === 'url') {
       const existing = await getOfflineLesson(module.id)
       if (existing) return
       const { saveLessonOffline } = await import('../db')
       await saveLessonOffline({ id: module.id, courseId, name: module.name, html: '', savedAt: Date.now() })
+      return
     }
 
     if (module.modname === 'forum') {
