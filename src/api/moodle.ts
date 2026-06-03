@@ -58,13 +58,15 @@ export const getPageContent = async (moduleId: number): Promise<string> => {
 
 export const transcribeVideo = async (
   videoUrl: string,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  language = "ru"
 ): Promise<string> => {
   const response = await fetch(videoUrl, { signal });
   const blob = await response.blob();
 
   const formData = new FormData();
   formData.append("file", blob, "video.mp4");
+  formData.append("language", language);
 
   const result = await fetch("http://localhost:9000/transcribe", {
     method: "POST",
