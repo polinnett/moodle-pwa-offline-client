@@ -1,0 +1,15 @@
+services:
+  whisper:
+    build: .
+    ports:
+      - "9000:9000"
+    volumes:
+      - whisper-models:/root/.cache/whisper
+      - ./main.py:/app/main.py
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+    restart: unless-stopped
+
+volumes:
+  whisper-models:
