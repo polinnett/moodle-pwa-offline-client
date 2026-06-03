@@ -30,6 +30,7 @@ export const ProfilePage = () => {
   const [loading, setLoading] = useState(true)
   const [lastActive, setLastActive] = useState<string | null>(null)
   const isOnline = useOfflineStatus()
+  const [clearing, setClearing] = useState(false)
 
   const init = async () => {
     setLoading(true)
@@ -89,17 +90,22 @@ export const ProfilePage = () => {
   }
 
   const handleClearCache = async () => {
-    const keys = await caches.keys()
-    await Promise.all(keys.map(key => caches.delete(key)))
-    const { db } = await import('../db')
-    await db.courses.clear()
-    await db.lessons.clear()
-    await db.transcriptions.clear()
-    const estimate = await navigator.storage.estimate()
-    setStorageInfo({
-      used: estimate.usage ?? 0,
-      quota: estimate.quota ?? 0,
-    })
+    setClearing(true)
+    try {
+      const keys = await caches.keys()
+      await Promise.all(keys.map(key => caches.delete(key)))
+      const { db } = await import('../db')
+      await db.courses.clear()
+      await db.lessons.clear()
+      await db.transcriptions.clear()
+      const estimate = await navigator.storage.estimate()
+      setStorageInfo({
+        used: estimate.usage ?? 0,
+        quota: estimate.quota ?? 0,
+      })
+    } finally {
+      setClearing(false)
+    }
   }
 
   if (loading) {
@@ -200,7 +206,7 @@ export const ProfilePage = () => {
                 text-white bg-red-500 hover:bg-red-600 mt-2
                 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Очистить весь кеш
+              {clearing ? 'Очищаем...' : 'Очистить весь кеш'}
             </button>
           </div>
         )}
