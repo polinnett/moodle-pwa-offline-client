@@ -1,7 +1,8 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { transcribeVideo } from '../../api/moodle';
 import jsPDF from 'jspdf';
 import { Icon } from '../ui/Icon';
+import { saveTranscription, getTranscription } from '../../db'
 
 export const TranscribeButton = ({ videoUrl, videoName }: { videoUrl: string; videoName: string }) => {
     const [status, setStatus] = useState<'idle' | 'loading' | 'done' | 'error'>('idle')
@@ -9,6 +10,15 @@ export const TranscribeButton = ({ videoUrl, videoName }: { videoUrl: string; vi
     const [elapsed, setElapsed] = useState(0)
     const abortRef = useRef<AbortController | null>(null)
     const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+    useEffect(() => {
+      getTranscription(videoUrl).then(saved => {
+        if (saved?.text) {
+          setText(saved.text)
+          setStatus('done')
+        }
+      })
+    }, [videoUrl])
   
     const handleTranscribe = async () => {
       setStatus('loading')
@@ -23,6 +33,7 @@ export const TranscribeButton = ({ videoUrl, videoName }: { videoUrl: string; vi
       try {
         const result = await transcribeVideo(videoUrl, abortRef.current.signal)
         setText(result)
+        await saveTranscription(videoUrl, result)
         setStatus('done')
       } catch (err: unknown) {
         if (err instanceof Error && err.name === 'AbortError') {
