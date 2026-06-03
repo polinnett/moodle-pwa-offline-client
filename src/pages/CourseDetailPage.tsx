@@ -188,12 +188,16 @@ const DownloadButton = ({
   onRefresh: () => void
 }) => {
   const [isDownloaded, setIsDownloaded] = useState(false)
+  const [fullyDownloaded, setFullyDownloaded] = useState(false)
   const [loading, setLoading] = useState(false)
   const token = localStorage.getItem('moodle_token')
   const isOnline = useOfflineStatus()
 
   useEffect(() => {
-    getOfflineCourse(courseId).then(c => setIsDownloaded(!!c))
+    getOfflineCourse(courseId).then(c => {
+      setIsDownloaded(!!c)
+      setFullyDownloaded(!!c?.fullyDownloaded)
+    })
   }, [courseId])
 
   const proxyUrl = (url: string) => url.replace('http://localhost:8000', '/moodle-api')
@@ -325,6 +329,7 @@ const DownloadButton = ({
       }
 
       setIsDownloaded(true)
+      setFullyDownloaded(true)
       onRefresh()
     } finally {
       setLoading(false)
@@ -361,7 +366,7 @@ const DownloadButton = ({
     }
   }
 
-  if (isDownloaded) {
+  if (isDownloaded && fullyDownloaded) {
     return (
       <button
         onClick={handleDelete}
