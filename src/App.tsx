@@ -11,6 +11,7 @@ import { HomePage } from './pages/HomePage'
 import { ForumPage } from './pages/ForumPage'
 import { ScrollRestoration } from './components/layout/ScrollRestoration'
 import { ProfilePage } from './pages/ProfilePage'
+import { NotFoundPage } from './pages/NotFoundPage'
 
 const queryClient = new QueryClient()
 
@@ -43,7 +44,12 @@ function App() {
               <Route path="/profile" element={
                 <RequireAuth><ProfilePage /></RequireAuth>
               } />
-              <Route path="/" element={<Navigate to="/login" replace />} />
+              <Route path="/" element={
+                localStorage.getItem('moodle_token')
+                  ? <Navigate to="/home" replace />
+                  : <Navigate to="/login" replace />
+              } />
+              <Route path="*" element={<NotFoundPage />} />
             </Routes>
         </BrowserRouter>
       </QueryClientProvider>

@@ -102,6 +102,13 @@ export const CoursesPage = () => {
     retry: false,
   })
 
+  useEffect(() => {
+    if (error) {
+      localStorage.removeItem('moodle_token')
+      navigate('/login')
+    }
+  }, [error])
+
   const displayCourses: Course[] = isOnline
     ? (courses ?? [])
     : offlineCourses.map(c => ({
