@@ -179,11 +179,13 @@ const SectionBlock = ({
 const DownloadButton = ({
   courseId,
   courseName,
+  courseSummary,
   sections,
   onRefresh,
 }: {
   courseId: number
   courseName: string
+  courseSummary?: string
   sections: CourseSection[]
   onRefresh: () => void
 }) => {
@@ -318,6 +320,7 @@ const DownloadButton = ({
         id: courseId,
         fullname: courseName,
         shortname: '',
+        summary: courseSummary,
         downloadedAt: Date.now(),
         sections,
         fullyDownloaded: true,
@@ -340,18 +343,25 @@ const DownloadButton = ({
   const handleDelete = async () => {
     setLoading(true)
     try {
-      await deleteOfflineCourse(courseId)
-
+      const course = await getOfflineCourse(courseId)
+      if (course) {
+        await saveCourseOffline({ ...course, fullyDownloaded: false })
+      }
+  
       const { deleteOfflineLesson } = await import('../db')
       const allModules = sections.flatMap(s => s.modules)
-
+  
       for (const module of allModules) {
+        if (module.modname === 'url') continue
+  
         try { await deleteOfflineLesson(module.id) } catch {}
-
+  
         const videoFile = module.contents?.find(c => c.mimetype === 'video/mp4')
         if (videoFile?.fileurl) {
+          const token = localStorage.getItem('moodle_token')
+          const proxiedUrl = `${videoFile.fileurl.replace('http://localhost:8000', '/moodle-api')}&token=${token}`
           const cache = await caches.open('moodle-videos')
-          await cache.delete(videoFile.fileurl)
+          await cache.delete(proxiedUrl)
         }
         const pdfFile = module.contents?.find(c => c.mimetype === 'application/pdf')
         if (pdfFile?.fileurl) {
@@ -359,8 +369,9 @@ const DownloadButton = ({
           await cache.delete(pdfFile.fileurl)
         }
       }
-
+  
       setIsDownloaded(false)
+      setFullyDownloaded(false)
       onRefresh()
     } finally {
       setLoading(false)
@@ -472,6 +483,7 @@ export const CourseDetailPage = () => {
             <DownloadButton
               courseId={id}
               courseName={title}
+              courseSummary={currentCourse?.summary}
               sections={sections}
               onRefresh={() => {
                 setRefreshKey(k => k + 1)

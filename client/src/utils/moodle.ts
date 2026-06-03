@@ -26,6 +26,7 @@ export const ensureCourseStructure = async (
       id: courseId,
       fullname: course?.fullname ?? "",
       shortname: course?.shortname ?? "",
+      summary: course?.summary ?? "",
       downloadedAt: Date.now(),
       sections,
     });

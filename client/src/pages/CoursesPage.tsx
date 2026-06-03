@@ -22,7 +22,8 @@ const CourseCard = ({
   onClick: () => void
 }) => {
   const token = localStorage.getItem('moodle_token')
-  const imageUrl = course.overviewfiles?.[0]?.fileurl
+  const isOnline = useOfflineStatus()
+  const imageUrl = isOnline && course.overviewfiles?.[0]?.fileurl
     ? `${course.overviewfiles[0].fileurl}?token=${token}`
     : null
 
@@ -42,7 +43,7 @@ const CourseCard = ({
           focus:ring-2
           focus:ring-green-500/50"
       >
-      {imageUrl && (
+      {imageUrl ? (
         <div className="w-full h-48 overflow-hidden">
           <img
             src={imageUrl}
@@ -50,6 +51,10 @@ const CourseCard = ({
             className="w-full h-full object-cover"
           />
         </div>
+      ) : (
+        <div className="w-full h-48 bg-gradient-to-br from-green-400 to-green-600
+          dark:from-green-700 dark:to-green-900"
+        />
       )}
 
       <div className="p-4 flex items-start justify-between gap-3">
@@ -120,7 +125,7 @@ export const CoursesPage = () => {
         id: c.id,
         fullname: c.fullname,
         shortname: c.shortname,
-        summary: '',
+        summary: c.summary ?? '',
       }))
 
   const downloadedIds = new Set(offlineCourses.map(c => c.id))

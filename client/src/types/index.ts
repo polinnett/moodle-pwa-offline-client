@@ -55,6 +55,7 @@ export interface OfflineCourse {
   id: number;
   fullname: string;
   shortname: string;
+  summary?: string;
   downloadedAt: number;
   sections: CourseSection[];
   fullyDownloaded?: boolean;
