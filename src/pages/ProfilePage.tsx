@@ -18,6 +18,7 @@ interface MoodleUser {
   fullname: string
   email: string
   profileimageurl: string
+  lastaccess: number
 }
 
 export const ProfilePage = () => {
@@ -180,7 +181,7 @@ export const ProfilePage = () => {
             className="w-full py-2.5 rounded-xl text-sm font-medium
                 cursor-pointer transition-colors
                 text-white bg-red-500
-                hover:bg-red-50 mt-5"
+                hover:bg-red-600 mt-5"
             >
             Очистить весь кеш
             </button>
@@ -237,13 +238,15 @@ export const ProfilePage = () => {
                 </div>
                 {lastActive && (
                 <div className="flex justify-between text-sm">
-                    <span className="text-gray-500 dark:text-gray-400 mr-2">Последняя активность</span>
-                    <span className="text-gray-800 dark:text-white">
-                    {new Date(lastActive).toLocaleString('ru-RU', {
-                        day: '2-digit', month: '2-digit', year: 'numeric',
-                        hour: '2-digit', minute: '2-digit'
-                    })}
-                    </span>
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                    {user.lastaccess
+                        ? `Активен: ${new Date(user.lastaccess * 1000).toLocaleString('ru-RU', {
+                            day: '2-digit', month: '2-digit', year: 'numeric',
+                            hour: '2-digit', minute: '2-digit'
+                        })}`
+                        : 'Никогда не входил'
+                    }
+                    </p>
                 </div>
                 )}
               </div>
