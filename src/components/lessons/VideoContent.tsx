@@ -200,10 +200,7 @@ export const VideoContent = ({ module, courseId }: { module: CourseModule; cours
               {!extractingAudio && <DownloadIcon />}
             </button>
           )}
-
-          {isOnline && (
-            <TranscribeButton videoUrl={videoSrc} videoName={module.name} />
-          )}
+          <TranscribeButton videoUrl={videoSrc} videoName={module.name} />
         </div>
       </div>
     )

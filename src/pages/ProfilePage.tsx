@@ -94,6 +94,7 @@ export const ProfilePage = () => {
     const { db } = await import('../db')
     await db.courses.clear()
     await db.lessons.clear()
+    await db.transcriptions.clear()
     const estimate = await navigator.storage.estimate()
     setStorageInfo({
       used: estimate.usage ?? 0,

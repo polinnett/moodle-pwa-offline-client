@@ -60,3 +60,7 @@ export const saveTranscription = async (id: string, text: string) => {
 export const getTranscription = async (id: string) => {
   return db.transcriptions.get(id);
 };
+
+export const deleteTranscription = async (id: string) => {
+  await db.transcriptions.delete(id);
+};

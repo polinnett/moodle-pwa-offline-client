@@ -3,6 +3,7 @@ import { transcribeVideo } from '../../api/moodle';
 import jsPDF from 'jspdf';
 import { Icon } from '../ui/Icon';
 import { saveTranscription, getTranscription } from '../../db'
+import { useOfflineStatus } from '../../hooks/useOfflineStatus'
 
 export const TranscribeButton = ({ videoUrl, videoName }: { videoUrl: string; videoName: string }) => {
     const [status, setStatus] = useState<'idle' | 'loading' | 'done' | 'error'>('idle')
@@ -109,6 +110,8 @@ export const TranscribeButton = ({ videoUrl, videoName }: { videoUrl: string; vi
         printWindow.close()
       }, 500)
     }
+
+    const isOnline = useOfflineStatus()
   
     if (status === 'idle') {
       return (
@@ -120,11 +123,13 @@ export const TranscribeButton = ({ videoUrl, videoName }: { videoUrl: string; vi
             <select
               value={language}
               onChange={e => setLanguage(e.target.value)}
+              disabled={!isOnline}
               className="w-full text-sm rounded-lg px-3 py-2 pr-8 cursor-pointer
                 appearance-none
                 bg-white dark:bg-gray-700
                 text-gray-800 dark:text-gray-200
-                focus:border-green-500 outline-none"
+                focus:border-green-500 outline-none
+                disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <option value="ru">Русский</option>
               <option value="en">English</option>
@@ -141,9 +146,11 @@ export const TranscribeButton = ({ videoUrl, videoName }: { videoUrl: string; vi
           </div>
           <button
             onClick={handleTranscribe}
+            disabled={!isOnline}
             className="w-full flex items-center gap-3 px-4 py-3 rounded-xl
               transition-colors cursor-pointer
-              bg-green-50 hover:bg-green-100 dark:bg-gray-700 dark:hover:bg-gray-600"
+              bg-green-50 hover:bg-green-100 dark:bg-gray-700 dark:hover:bg-gray-600
+              disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Icon name="transcribe" size={20} />
             <div className="flex-1 text-left">
@@ -228,28 +235,44 @@ export const TranscribeButton = ({ videoUrl, videoName }: { videoUrl: string; vi
     return (
       <div className="space-y-2">
         <div className="px-4 py-3 rounded-xl bg-green-50 dark:bg-gray-700">
-          <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <Icon name="ok" size={20} />
               <p className="text-sm font-medium text-gray-800 dark:text-white">
                 Расшифровка готова
               </p>
             </div>
-            <button
-              onClick={handleSavePDF}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg
-                text-xs font-medium cursor-pointer transition-colors
-                bg-green-500 hover:bg-green-600 text-white"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12"
-                viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                <polyline points="7 10 12 15 17 10"/>
-                <line x1="12" y1="15" x2="12" y2="3"/>
-              </svg>
-              Скачать PDF
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={async () => {
+                  const { deleteTranscription } = await import('../../db')
+                  await deleteTranscription(videoUrl)
+                  setText('')
+                  setStatus('idle')
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg
+                  text-xs font-medium cursor-pointer transition-colors
+                  bg-red-100 text-red-600 hover:bg-red-200
+                  dark:bg-red-900/30 dark:text-red-400"
+              >
+                Удалить
+              </button>
+              <button
+                onClick={handleSavePDF}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg
+                  text-xs font-medium cursor-pointer transition-colors
+                  bg-green-500 hover:bg-green-600 text-white"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12"
+                  viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                  strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="7 10 12 15 17 10"/>
+                  <line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+                Скачать PDF
+              </button>
+            </div>
           </div>
           <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-3 leading-relaxed">
             {text}
