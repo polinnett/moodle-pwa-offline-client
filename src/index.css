@@ -24,6 +24,16 @@
   100% { width: 40%; margin-left: 60%; }
 }
 
+*:focus-visible {
+  outline: 2px solid #22c55e;
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+*:focus:not(:focus-visible) {
+  outline: none;
+}
+
 .quiz-content .info { display: none; }
 .quiz-content .ablock { margin-top: 12px; }
 .quiz-content .answer div { 

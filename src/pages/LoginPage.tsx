@@ -130,11 +130,12 @@ export const LoginPage = () => {
                   <button
                     type="button"
                     onClick={() => setShowPassword(prev => !prev)}
+                    aria-label={showPassword ? 'Скрыть пароль' : 'Показать пароль'}
+                    aria-pressed={showPassword}
                     className="absolute right-3 top-1/2 -translate-y-1/2
                       cursor-pointer transition-colors
                       text-gray-400 hover:text-green-500
                       dark:text-gray-500 dark:hover:text-green-400"
-                    aria-label={showPassword ? 'Скрыть пароль' : 'Показать пароль'}
                   >
                     {showPassword ? <EyeOffIcon /> : <EyeIcon />}
                   </button>
@@ -152,6 +153,7 @@ export const LoginPage = () => {
               <button
                 type="submit"
                 disabled={loading}
+                aria-disabled={loading}
                 className="w-full py-2.5 rounded-xl font-medium text-sm
                   transition-all duration-200 cursor-pointer
                   bg-green-500 hover:bg-green-600 text-white

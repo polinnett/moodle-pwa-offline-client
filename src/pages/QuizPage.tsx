@@ -448,6 +448,8 @@ export const QuizPage = () => {
                   {!isMatch && !isDdwtos && opts.map(opt => (
                     <button
                       key={opt.value}
+                      role="radio"
+                      aria-checked={currentAnswer === opt.value}
                       onClick={() => setAnswers(prev => ({ ...prev, [fieldName]: opt.value }))}
                       className={`w-full text-left flex items-center gap-3 px-4 py-3
                         rounded-xl border transition-colors cursor-pointer text-sm
@@ -473,6 +475,8 @@ export const QuizPage = () => {
                   {isCheckbox && checkboxOptions.map(opt => (
                     <button
                       key={opt.name}
+                      role="checkbox"
+                      aria-checked={answers[opt.name] === '1'}
                       onClick={() => setAnswers(prev => ({
                         ...prev,
                         [opt.name]: prev[opt.name] === '1' ? '0' : '1'
@@ -606,6 +610,8 @@ export const QuizPage = () => {
             <button
               onClick={handleSubmit}
               disabled={status === 'submitting' || !isOnline}
+              aria-disabled={status === 'submitting' || !isOnline}
+              aria-live="polite"
               className="flex-1 py-3 rounded-xl font-medium text-sm
                 cursor-pointer transition-colors
                 bg-green-500 hover:bg-green-600 text-white

@@ -167,9 +167,10 @@ export const BookContent = ({ module, courseId }: { module: CourseModule; course
               <span>Удалить</span>
             </button>
           ) : isOnline ? (
-            <button
+            <button 
               onClick={handleSave}
               disabled={saving}
+              aria-live="polite"
               className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm
                 font-medium cursor-pointer transition-colors
                 bg-green-500 text-white hover:bg-green-600
@@ -200,6 +201,7 @@ export const BookContent = ({ module, courseId }: { module: CourseModule; course
               <button
                 key={i}
                 onClick={() => setCurrentChapter(i)}
+                aria-current={currentChapter === i ? "step" : undefined}
                 className={`w-full text-left px-4 py-2.5 text-sm transition-colors cursor-pointer
                   border-b border-gray-100 dark:border-gray-700 last:border-b-0
                   ${currentChapter === i

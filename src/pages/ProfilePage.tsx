@@ -176,6 +176,9 @@ export const ProfilePage = () => {
                 {((storageInfo.used / storageInfo.quota) * 100).toFixed(1)}% использовано
               </p>
             </div>
+            <p className="text-sm text-gray-800 font-bold dark:text-white mt-4 mx-auto text-center max-w-prose">
+            После очистки все скачанные курсы и материалы будут удалены и станут недоступны офлайн!
+            </p>
             <button
             onClick={handleClearCache}
             className="w-full py-2.5 rounded-xl text-sm font-medium
@@ -202,6 +205,8 @@ export const ProfilePage = () => {
             <button
                 onClick={refreshUsers}
                 disabled={loadingUsers}
+                aria-disabled={loadingUsers}
+                aria-live="polite"
                 className="text-sm px-3 py-1.5 rounded-xl cursor-pointer transition-colors
                 bg-green-600 hover:bg-green-500 text-white disabled:opacity-50"
             >

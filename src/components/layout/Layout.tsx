@@ -37,6 +37,7 @@ export const Layout = ({ children, title, showBack = false }: LayoutProps) => {
           {showBack ? (
             <button
               onClick={() => navigate(-1)}
+              aria-label="Вернуться назад"
               className="cursor-pointer p-1.5 rounded-lg transition-colors
                 text-gray-500 hover:text-green-600
                 dark:text-gray-400 dark:hover:text-green-400"
@@ -48,7 +49,7 @@ export const Layout = ({ children, title, showBack = false }: LayoutProps) => {
               </svg>
             </button>
           ) : (
-            <button onClick={() => navigate('/home')} className="cursor-pointer shrink-0">
+            <button aria-label="Главная страница" onClick={() => navigate('/home')} className="cursor-pointer shrink-0">
               <Logo size={36} />
             </button>
           )}
@@ -96,8 +97,7 @@ export const Layout = ({ children, title, showBack = false }: LayoutProps) => {
               <div className={`w-1.5 h-1.5 rounded-lg ${isOnline ? 'bg-green-500' : 'bg-red-500'}`}/>
               {isOnline ? 'Онлайн' : 'Офлайн'}
             </div>
-            <ThemeToggle />
-            <button
+            <button 
               onClick={() => navigate('/profile')}
               className={`cursor-pointer p-1.5 rounded-lg transition-colors
                 ${location.pathname === '/profile'
@@ -108,6 +108,7 @@ export const Layout = ({ children, title, showBack = false }: LayoutProps) => {
             >
               <Icon name="profile" size={30} />
             </button>
+            <ThemeToggle />
             <button
               onClick={handleLogout}
               className="cursor-pointer p-1.5 rounded-lg transition-colors
@@ -129,8 +130,9 @@ export const Layout = ({ children, title, showBack = false }: LayoutProps) => {
             <div className={`w-2.5 h-2.5 rounded-full ${isOnline ? 'bg-green-500' : 'bg-red-500'}`}/>
           </div>
 
-          <button
+          <button 
             onClick={() => setMenuOpen(!menuOpen)}
+            aria-label="Открыть или закрыть меню"
             className="md:hidden cursor-pointer p-1.5 rounded-lg transition-colors
               text-gray-500 hover:text-green-600
               dark:text-gray-400 dark:hover:text-green-400"
@@ -201,7 +203,7 @@ export const Layout = ({ children, title, showBack = false }: LayoutProps) => {
               className="w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium
                 cursor-pointer transition-colors
                 text-gray-600 hover:bg-green-50
-                dark:text-gray-300 dark:hover:bg-gray-700"
+                dark:text-gray-400 dark:hover:bg-gray-700"
             >
               Сменить тему
             </button>

@@ -111,6 +111,7 @@ export const PageContent = ({ module, courseId }: { module: CourseModule; course
             <button
               onClick={handleSave}
               disabled={saving || !html}
+              aria-live="polite"
               className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm
                 font-medium cursor-pointer transition-colors
                 bg-green-500 text-white hover:bg-green-600

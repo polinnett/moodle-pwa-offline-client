@@ -145,6 +145,7 @@ export const VideoContent = ({ module, courseId }: { module: CourseModule; cours
             <button
               onClick={handleSaveOffline}
               disabled={caching}
+              aria-live="polite"
               className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors cursor-pointer bg-green-50 hover:bg-green-100 dark:bg-gray-700 dark:hover:bg-gray-600 disabled:opacity-70"
             >
               <Icon name="offline" size={20} />
@@ -186,6 +187,7 @@ export const VideoContent = ({ module, courseId }: { module: CourseModule; cours
             <button
               onClick={handleExtractAudio}
               disabled={extractingAudio}
+              aria-live="polite"
               className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors cursor-pointer bg-green-50 hover:bg-green-100 dark:bg-gray-700 dark:hover:bg-gray-600 disabled:opacity-50"
             >
               <Icon name="audio" size={20} />

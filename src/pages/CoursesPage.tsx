@@ -31,12 +31,17 @@ const CourseCard = ({
       onClick={onClick}
       style={{ '--hover-border': 'var(--color-primary-600)' } as React.CSSProperties}
       className="w-full text-left rounded-2xl overflow-hidden transition-all cursor-pointer
-        bg-white dark:bg-gray-800
-        border-2 border-transparent
-        hover:shadow-md shadow-sm"
-      onMouseEnter={e => (e.currentTarget.style.borderColor = 'var(--color-primary-600)')}
-      onMouseLeave={e => (e.currentTarget.style.borderColor = 'transparent')}
-    >
+          bg-white dark:bg-gray-800
+          border-2 border-transparent
+          shadow-sm
+          hover:border-green-600
+          hover:shadow-md
+          focus:border-green-600
+          focus:shadow-md
+          focus:outline-none
+          focus:ring-2
+          focus:ring-green-500/50"
+      >
       {imageUrl && (
         <div className="w-full h-48 overflow-hidden">
           <img

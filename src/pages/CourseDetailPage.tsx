@@ -113,7 +113,7 @@ const ModuleItem = ({
         )}
       </div>
       {isSupported && (
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+        <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16"
           viewBox="0 0 24 24" fill="none" stroke="currentColor"
           strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
           className="text-gray-300 dark:text-gray-600 shrink-0 mt-0.5"
@@ -366,6 +366,7 @@ const DownloadButton = ({
       <button
         onClick={handleDelete}
         disabled={loading}
+        aria-live="polite"
         className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm
           font-medium cursor-pointer transition-colors
           bg-green-100 text-green-700 hover:bg-red-100 hover:text-red-600
@@ -383,6 +384,7 @@ const DownloadButton = ({
     <button
       onClick={handleDownload}
       disabled={loading}
+      aria-live="polite"
       className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm
         font-medium cursor-pointer transition-colors
         bg-green-500 text-white hover:bg-green-600

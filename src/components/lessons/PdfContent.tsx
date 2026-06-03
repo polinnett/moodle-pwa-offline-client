@@ -159,6 +159,7 @@ export const PdfContent = ({ module, courseId }: { module: CourseModule; courseI
           <button
             onClick={handleSaveOffline}
             disabled={caching}
+            aria-live="polite"
             className="w-full flex items-center gap-3 px-4 py-3 rounded-xl
               bg-green-50 hover:bg-green-100 dark:bg-gray-700 dark:hover:bg-gray-600
               transition-colors cursor-pointer disabled:opacity-70"
