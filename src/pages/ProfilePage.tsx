@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Layout } from '../components/layout/Layout'
 import { Icon } from '../components/ui/Icon'
 import { getSiteInfo, getSystemUsers } from '../api/moodle'
+import { useOfflineStatus } from '../hooks/useOfflineStatus'
 
 interface UserInfo {
   fullname: string
@@ -28,37 +29,48 @@ export const ProfilePage = () => {
   const [storageInfo, setStorageInfo] = useState<{ used: number; quota: number } | null>(null)
   const [loading, setLoading] = useState(true)
   const [lastActive, setLastActive] = useState<string | null>(null)
+  const isOnline = useOfflineStatus()
 
-  useEffect(() => {
-    const init = async () => {
-      try {
-        const lastActiveStr = localStorage.getItem('last_active')
-        setLastActive(lastActiveStr)
-        localStorage.setItem('last_active', new Date().toISOString())
-
-        const info = await getSiteInfo()
-        setUserInfo(info)
+  const init = async () => {
+    setLoading(true)
+    try {
+      const lastActiveStr = localStorage.getItem('last_active')
+      setLastActive(lastActiveStr)
+      localStorage.setItem('last_active', new Date().toISOString())
   
-        if ('storage' in navigator && 'estimate' in navigator.storage) {
-          const estimate = await navigator.storage.estimate()
-          setStorageInfo({
-            used: estimate.usage ?? 0,
-            quota: estimate.quota ?? 0,
-          })
-        }
-  
-        if (info.userissiteadmin) {
-          const allUsers = await getSystemUsers()
-          setUsers(allUsers ?? [])
-        }
-      } catch (e) {
-        console.error(e)
-      } finally {
-        setLoading(false)
+      if (!navigator.onLine) {
+        const cached = localStorage.getItem('profile_cache')
+        if (cached) setUserInfo(JSON.parse(cached))
+        const storageCached = localStorage.getItem('storage_cache')
+        if (storageCached) setStorageInfo(JSON.parse(storageCached))
+        return
       }
+  
+      const info = await getSiteInfo()
+      setUserInfo(info)
+      localStorage.setItem('profile_cache', JSON.stringify(info))
+  
+      if ('storage' in navigator && 'estimate' in navigator.storage) {
+        const estimate = await navigator.storage.estimate()
+        const storageData = { used: estimate.usage ?? 0, quota: estimate.quota ?? 0 }
+        setStorageInfo(storageData)
+        localStorage.setItem('storage_cache', JSON.stringify(storageData))
+      }
+  
+      if (info.userissiteadmin) {
+        const allUsers = await getSystemUsers()
+        setUsers(allUsers ?? [])
+      }
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setLoading(false)
     }
+  }
+  
+  useEffect(() => {
     init()
-  }, [])
+  }, [isOnline])
 
   const refreshUsers = async () => {
     setLoadingUsers(true)
@@ -113,7 +125,7 @@ export const ProfilePage = () => {
             {userInfo?.userpictureurl ? (
               <img
                 src={userInfo.userpictureurl}
-                alt={userInfo.fullname}
+                alt={`Аватар ${userInfo.fullname}`}
                 className="w-16 h-16 rounded-full object-cover"
               />
             ) : (
@@ -177,16 +189,17 @@ export const ProfilePage = () => {
               </p>
             </div>
             <p className="text-sm text-gray-800 font-bold dark:text-white mt-4 mx-auto text-center max-w-prose">
-            После очистки все скачанные курсы и материалы будут удалены и станут недоступны офлайн!
+              После очистки все скачанные курсы и материалы будут удалены и станут недоступны офлайн!
             </p>
             <button
-            onClick={handleClearCache}
-            className="w-full py-2.5 rounded-xl text-sm font-medium
+              onClick={handleClearCache}
+              disabled={!isOnline}
+              className="w-full py-2.5 rounded-xl text-sm font-medium
                 cursor-pointer transition-colors
-                text-white bg-red-500
-                hover:bg-red-600 mt-5"
+                text-white bg-red-500 hover:bg-red-600 mt-2
+                disabled:opacity-50 disabled:cursor-not-allowed"
             >
-            Очистить весь кеш
+              Очистить весь кеш
             </button>
           </div>
         )}
@@ -197,21 +210,21 @@ export const ProfilePage = () => {
             border border-green-100 dark:border-gray-700"
           >
             <div className="px-4 py-3 border-b border-green-200 dark:border-gray-700
-            flex items-center justify-between"
+              flex items-center justify-between"
             >
-            <h3 className="font-bold text-gray-900 dark:text-white">
+              <h3 className="font-bold text-gray-900 dark:text-white">
                 Пользователи системы
-            </h3>
-            <button
+              </h3>
+              <button
                 onClick={refreshUsers}
                 disabled={loadingUsers}
                 aria-disabled={loadingUsers}
                 aria-live="polite"
                 className="text-sm px-3 py-1.5 rounded-xl cursor-pointer transition-colors
-                bg-green-600 hover:bg-green-500 text-white disabled:opacity-50"
-            >
+                  bg-green-600 hover:bg-green-500 text-white disabled:opacity-50"
+              >
                 {loadingUsers ? 'Обновляем...' : 'Обновить'}
-            </button>
+              </button>
             </div>
             {users.map(user => (
               <div key={user.id}
@@ -221,7 +234,7 @@ export const ProfilePage = () => {
                 {user.profileimageurl ? (
                   <img
                     src={user.profileimageurl}
-                    alt={user.fullname}
+                    alt={`Аватар ${user.fullname}`}
                     className="w-8 h-8 rounded-full object-cover shrink-0"
                   />
                 ) : (
@@ -240,20 +253,16 @@ export const ProfilePage = () => {
                   <p className="text-xs text-gray-400 dark:text-gray-500 truncate">
                     {user.email}
                   </p>
-                </div>
-                {lastActive && (
-                <div className="flex justify-between text-sm">
-                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
                     {user.lastaccess
-                        ? `Активен: ${new Date(user.lastaccess * 1000).toLocaleString('ru-RU', {
-                            day: '2-digit', month: '2-digit', year: 'numeric',
-                            hour: '2-digit', minute: '2-digit'
+                      ? `Активен: ${new Date(user.lastaccess * 1000).toLocaleString('ru-RU', {
+                          day: '2-digit', month: '2-digit', year: 'numeric',
+                          hour: '2-digit', minute: '2-digit'
                         })}`
-                        : 'Никогда не входил'
+                      : 'Никогда не входил'
                     }
-                    </p>
+                  </p>
                 </div>
-                )}
               </div>
             ))}
           </div>
