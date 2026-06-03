@@ -34,6 +34,12 @@
   outline: none;
 }
 
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: none;
+}
+
 .quiz-content .info { display: none; }
 .quiz-content .ablock { margin-top: 12px; }
 .quiz-content .answer div { 
