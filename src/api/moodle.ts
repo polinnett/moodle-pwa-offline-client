@@ -257,8 +257,11 @@ export const getSiteInfo = async () => {
 };
 
 export const getSystemUsers = async () => {
-  const res = await ws("core_enrol_get_enrolled_users", {
-    courseid: 1,
-  });
-  return res.data;
+  const res = await ws("core_enrol_get_enrolled_users", { courseid: 1 });
+  return (
+    res.data?.filter(
+      (u: { username: string; email: string }) =>
+        u.username !== "guest" && u.email !== "root@localhost"
+    ) ?? []
+  );
 };
