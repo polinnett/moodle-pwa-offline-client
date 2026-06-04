@@ -13,6 +13,7 @@ import { PdfContent } from '../components/lessons/PdfContent'
 import { QuizContent } from '../components/lessons/QuizContent'
 import { UrlContent } from '../components/lessons/UrlContent'
 import { VideoContent } from '../components/lessons/VideoContent'
+import { NotesPanel } from '../components/lessons/NotesPanel'
 
 const getModuleType = (module: CourseModule) => {
   if (module.modname === 'url') return 'url'
@@ -85,15 +86,20 @@ export const LessonPage = () => {
 
   return (
     <Layout title={module?.name ?? 'Лекция'} showBack>
-      <div className="space-y-4">
-        {isLoading && (
-          <div className="animate-pulse space-y-3">
-            {[1, 2, 3].map(i => (
-              <div key={i} className="h-4 bg-gray-200 dark:bg-gray-700 rounded"/>
-            ))}
-          </div>
+      <div className="flex gap-4 items-start">
+        <div className="flex-1 min-w-0 space-y-4">
+          {isLoading && (
+            <div className="animate-pulse space-y-3">
+              {[1, 2, 3].map(i => (
+                <div key={i} className="h-4 bg-gray-200 dark:bg-gray-700 rounded"/>
+              ))}
+            </div>
+          )}
+          {renderContent()}
+        </div>
+        {module && (
+          <NotesPanel courseId={id} lessonId={modId} />
         )}
-        {renderContent()}
       </div>
     </Layout>
   )
