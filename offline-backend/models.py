@@ -26,4 +26,6 @@ class Note(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     is_deleted = Column(Boolean, default=False)
 
+    user_token_hash = Column(String, nullable=False, index=True)
+
     course = relationship("Course", back_populates="notes")

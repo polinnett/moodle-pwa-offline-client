@@ -27,6 +27,11 @@ interface PendingUpdate {
 
 const BACKEND_URL = 'http://localhost:8001'
 
+const getAuthHeaders = () => ({
+  'Content-Type': 'application/json',
+  'Authorization': localStorage.getItem('moodle_token') ?? '',
+})
+
 export const NotesPanel = ({
   courseId,
   lessonId,
@@ -55,7 +60,9 @@ export const NotesPanel = ({
   const loadNotes = async () => {
     if (isOnline) {
       try {
-        const res = await fetch(`${BACKEND_URL}/notes/?lesson_id=${lessonId}`)
+        const res = await fetch(`${BACKEND_URL}/notes/?lesson_id=${lessonId}`, {
+          headers: getAuthHeaders(),
+        })        
         const serverNotes: Note[] = await res.json()
         const localUnsync = loadOfflineNotes().filter(n => !n.synced)
         const allNotes = [...serverNotes.map(n => ({ ...n, synced: true })), ...localUnsync]
@@ -75,7 +82,10 @@ export const NotesPanel = ({
     const deletes: PendingDelete[] = JSON.parse(stored)
     for (const item of deletes) {
       try {
-        await fetch(`${BACKEND_URL}/notes/${item.id}`, { method: 'DELETE' })
+        await fetch(`${BACKEND_URL}/notes/${item.id}`, {
+          method: 'DELETE',
+          headers: getAuthHeaders(),
+        })
       } catch {}
     }
     localStorage.removeItem(pendingDeletesKey)
@@ -89,7 +99,7 @@ export const NotesPanel = ({
       try {
         await fetch(`${BACKEND_URL}/notes/${item.id}`, {
           method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
+          headers: getAuthHeaders(),
           body: JSON.stringify({ title: item.title, text: item.text }),
         })
       } catch {}
@@ -103,7 +113,7 @@ export const NotesPanel = ({
       try {
         await fetch(`${BACKEND_URL}/notes/batch`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: getAuthHeaders(),
           body: JSON.stringify(localNotes),
         })
         const stored = localStorage.getItem(offlineKey)
@@ -146,7 +156,7 @@ export const NotesPanel = ({
       try {
         const res = await fetch(`${BACKEND_URL}/notes/`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: getAuthHeaders(),
           body: JSON.stringify(note),
         })
         const created: Note = await res.json()
@@ -191,7 +201,10 @@ export const NotesPanel = ({
     if (noteId) {
       if (isOnline) {
         try {
-          await fetch(`${BACKEND_URL}/notes/${noteId}`, { method: 'DELETE' })
+          await fetch(`${BACKEND_URL}/notes/${noteId}`, {
+            method: 'DELETE',
+            headers: getAuthHeaders(),
+          })
           const stored = localStorage.getItem(offlineKey)
           if (stored) {
             const updated = (JSON.parse(stored) as Note[]).filter(n => n.id !== noteId)
@@ -234,7 +247,7 @@ export const NotesPanel = ({
         try {
           await fetch(`${BACKEND_URL}/notes/${noteId}`, {
             method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
+            headers: getAuthHeaders(),
             body: JSON.stringify({ title: newTitle, text: newText }),
           })
         } catch {}
