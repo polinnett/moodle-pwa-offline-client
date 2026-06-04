@@ -10,6 +10,7 @@ import { Icon } from '../components/ui/Icon'
 import { OfflineBadge } from '../components/badges/OfflineBadge'
 import { OnlineOnlyBadge } from '../components/badges/OnlineOnlyBadge'
 import { fixImageUrls } from '../utils/moodle'
+import { CourseUpdates } from '../components/lessons/CourseUpdates'
 
 const ModuleIcon = ({ modname }: { modname: string }) => {
   const icons: Record<string, string> = {
@@ -491,6 +492,21 @@ export const CourseDetailPage = () => {
               }}
             />
           </div>
+        )}
+
+        {sections && sections.length > 0 && (
+          <CourseUpdates
+            courseId={id}
+            courseName={title}
+            modules={sections
+              .flatMap(s => s.modules)
+              .filter(m => m.visible !== 0)
+              .map(m => ({
+                id: m.id,
+                name: m.name,
+                timemodified: m.contents?.[0]?.timemodified ?? 0
+              }))}
+          />
         )}
 
         {isLoading && (
