@@ -19,6 +19,7 @@ class Note(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     course_id = Column(Integer, ForeignKey("courses.course_id"), nullable=False)
     lesson_id = Column(Integer, nullable=False)
+    title = Column(String, nullable=True)
     text = Column(Text, nullable=False)
     timestamp_seconds = Column(Float, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)

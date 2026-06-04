@@ -6,6 +6,7 @@ interface Note {
   id?: number
   course_id: number
   lesson_id: number
+  title?: string
   text: string
   created_at?: string
   updated_at?: string
@@ -25,6 +26,7 @@ export const NotesPanel = ({
   const [notes, setNotes] = useState<Note[]>([])
   const [text, setText] = useState('')
   const [loading, setLoading] = useState(false)
+  const [title, setTitle] = useState('')
 
   const offlineKey = `offline_notes_${courseId}_${lessonId}`
 
@@ -87,6 +89,7 @@ export const NotesPanel = ({
     const note: Note = {
       course_id: courseId,
       lesson_id: lessonId,
+      title: title.trim() || undefined,
       text: text.trim(),
     }
 
@@ -107,6 +110,7 @@ export const NotesPanel = ({
     }
 
     setText('')
+    setTitle('')
     setLoading(false)
   }
 
@@ -152,18 +156,36 @@ export const NotesPanel = ({
             className="flex items-start gap-2 p-2 rounded-xl
               bg-green-50 dark:bg-gray-700"
           >
-            <p className="text-xs text-gray-700 dark:text-gray-300 flex-1 leading-relaxed">
-              {note.text}
-            </p>
+            <div className="flex-1 min-w-0">
+              {note.title && (
+                <p className="text-xs font-semibold text-gray-800 dark:text-white mb-1">
+                  {note.title}
+                </p>
+              )}
+              <p className="text-xs text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap">
+                {note.text}
+              </p>
+            </div>
             <button
-                onClick={() => note.id && handleDelete(note.id)}
-                className="text-gray-300 hover:text-red-400 transition-colors shrink-0"
+              onClick={() => note.id && handleDelete(note.id)}
+              className="text-gray-300 hover:text-red-400 transition-colors shrink-0 cursor-pointer"
             >
-                <Icon name="trash" size={14} className="mt-0.5"/>
+              <Icon name="trash" size={14} className="mt-0.5" />
             </button>
           </div>
         ))}
       </div>
+
+      <input
+        value={title}
+        onChange={e => setTitle(e.target.value)}
+        placeholder="Заголовок..."
+        className="w-full text-xs font-medium rounded-xl border border-green-200
+          dark:border-gray-600 bg-gray-50 dark:bg-gray-700
+          text-gray-700 dark:text-gray-300
+          placeholder-gray-400 dark:placeholder-gray-500
+          p-2 focus:outline-none focus:ring-1 focus:ring-green-400"
+      />
 
       <textarea
         value={text}

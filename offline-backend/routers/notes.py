@@ -12,6 +12,7 @@ router = APIRouter(prefix="/notes", tags=["notes"])
 class NoteCreate(BaseModel):
     course_id: int
     lesson_id: int
+    title: Optional[str] = None
     text: str
     timestamp_seconds: Optional[float] = None
 
@@ -21,6 +22,7 @@ class NoteUpdate(BaseModel):
 class NoteBatchItem(BaseModel):
     course_id: int
     lesson_id: int
+    title: Optional[str] = None
     text: str
     timestamp_seconds: Optional[float] = None
     created_at: Optional[datetime] = None
