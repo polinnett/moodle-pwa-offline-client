@@ -82,6 +82,7 @@ async def sync_notes(notes: list[NoteBatchItem], db: AsyncSession = Depends(get_
         new_note = Note(
             course_id=item.course_id,
             lesson_id=item.lesson_id,
+            title=item.title,
             text=item.text,
             timestamp_seconds=item.timestamp_seconds,
             created_at=item.created_at or datetime.utcnow(),
