@@ -27,6 +27,9 @@ export const NotesPanel = ({
   const [text, setText] = useState('')
   const [loading, setLoading] = useState(false)
   const [title, setTitle] = useState('')
+  const [editingId, setEditingId] = useState<number | null>(null)
+  const [editTitle, setEditTitle] = useState('')
+  const [editText, setEditText] = useState('')
 
   const offlineKey = `offline_notes_${courseId}_${lessonId}`
 
@@ -129,6 +132,29 @@ export const NotesPanel = ({
     }
   }
 
+  const handleEdit = async (noteId: number) => {
+    if (isOnline) {
+      try {
+        await fetch(`${BACKEND_URL}/notes/${noteId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title: editTitle.trim() || undefined, text: editText.trim() }),
+        })
+      } catch {}
+    } else {
+      const stored = localStorage.getItem(offlineKey)
+      if (!stored) return
+      const updated = (JSON.parse(stored) as Note[]).map(n =>
+        n.id === noteId ? { ...n, title: editTitle.trim() || undefined, text: editText.trim() } : n
+      )
+      localStorage.setItem(offlineKey, JSON.stringify(updated))
+    }
+    setNotes(prev => prev.map(n =>
+      n.id === noteId ? { ...n, title: editTitle.trim() || undefined, text: editText.trim() } : n
+    ))
+    setEditingId(null)
+  }
+
   return (
     <div className="w-64 shrink-0 rounded-2xl border border-green-200
       dark:border-gray-700 bg-white dark:bg-gray-800 p-4
@@ -153,25 +179,73 @@ export const NotesPanel = ({
         {notes.map(note => (
           <div
             key={note.id}
-            className="flex items-start gap-2 p-2 rounded-xl
-              bg-green-50 dark:bg-gray-700"
+            className="flex items-start gap-2 p-2 rounded-xl bg-green-50 dark:bg-gray-700"
           >
-            <div className="flex-1 min-w-0">
-              {note.title && (
-                <p className="text-xs font-semibold text-gray-800 dark:text-white mb-1">
-                  {note.title}
+            {editingId === note.id ? (
+              <div className="flex-1 min-w-0 flex flex-col gap-1.5">
+                <input
+                  value={editTitle}
+                  onChange={e => setEditTitle(e.target.value)}
+                  placeholder="Заголовок..."
+                  className="w-full text-xs font-medium rounded-lg border border-green-200
+                    dark:border-gray-600 bg-white dark:bg-gray-800
+                    text-gray-700 dark:text-gray-300 p-1.5
+                    focus:outline-none focus:ring-1 focus:ring-green-400"
+                />
+                <textarea
+                  value={editText}
+                  onChange={e => setEditText(e.target.value)}
+                  rows={3}
+                  className="w-full text-xs rounded-lg border border-green-200
+                    dark:border-gray-600 bg-white dark:bg-gray-800
+                    text-gray-700 dark:text-gray-300 p-1.5 resize-none
+                    focus:outline-none focus:ring-1 focus:ring-green-400"
+                />
+                <div className="flex gap-1.5">
+                  <button
+                    onClick={() => note.id && handleEdit(note.id)}
+                    className="flex-1 py-1 rounded-lg text-xs font-medium
+                      bg-green-500 text-white hover:bg-green-600 cursor-pointer transition-colors"
+                  >
+                    Сохранить
+                  </button>
+                  <button
+                    onClick={() => setEditingId(null)}
+                    className="flex-1 py-1 rounded-lg text-xs font-medium
+                      bg-gray-100 dark:bg-gray-600 text-gray-600 dark:text-gray-300
+                      hover:bg-gray-200 cursor-pointer transition-colors"
+                  >
+                    Отмена
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div
+                className="flex-1 min-w-0 cursor-pointer"
+                onClick={() => {
+                  setEditingId(note.id ?? null)
+                  setEditTitle(note.title ?? '')
+                  setEditText(note.text)
+                }}
+              >
+                {note.title && (
+                  <p className="text-xs font-semibold text-gray-800 dark:text-white mb-1">
+                    {note.title}
+                  </p>
+                )}
+                <p className="text-xs text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap">
+                  {note.text}
                 </p>
-              )}
-              <p className="text-xs text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap">
-                {note.text}
-              </p>
-            </div>
-            <button
-              onClick={() => note.id && handleDelete(note.id)}
-              className="text-gray-300 hover:text-red-400 transition-colors shrink-0 cursor-pointer"
-            >
-              <Icon name="trash" size={14} className="mt-0.5" />
-            </button>
+              </div>
+            )}
+            {editingId !== note.id && (
+              <button
+                onClick={() => note.id && handleDelete(note.id)}
+                className="text-gray-300 hover:text-red-400 transition-colors shrink-0 cursor-pointer"
+              >
+                <Icon name="trash" size={14} className="mt-0.5" />
+              </button>
+            )}
           </div>
         ))}
       </div>

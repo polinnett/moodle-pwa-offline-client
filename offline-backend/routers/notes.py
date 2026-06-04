@@ -18,6 +18,7 @@ class NoteCreate(BaseModel):
 
 class NoteUpdate(BaseModel):
     text: str
+    title: Optional[str] = None
 
 class NoteBatchItem(BaseModel):
     course_id: int
@@ -53,6 +54,7 @@ async def update_note(note_id: int, data: NoteUpdate, db: AsyncSession = Depends
     if not note:
         raise HTTPException(status_code=404, detail="Заметка не найдена")
     note.text = data.text
+    note.title = data.title
     note.updated_at = datetime.utcnow()
     await db.commit()
     await db.refresh(note)
