@@ -8,6 +8,8 @@ RUN apt-get update && apt-get install -y \
 
 RUN pip install fastapi uvicorn openai-whisper python-multipart
 
+RUN python -c "import whisper; whisper.load_model('base')"
+
 COPY main.py .
 
 EXPOSE 9000

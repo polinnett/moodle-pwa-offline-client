@@ -1,0 +1,17 @@
+services:
+  whisper:
+    build: ./whisper-service
+    ports:
+      - "9000:9000"
+    restart: unless-stopped
+
+  offline-backend:
+    build: ./offline-backend
+    ports:
+      - "8001:8001"
+    volumes:
+      - offline-db:/app/data
+    restart: unless-stopped
+
+volumes:
+  offline-db:
