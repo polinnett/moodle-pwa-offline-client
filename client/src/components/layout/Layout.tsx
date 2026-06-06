@@ -4,7 +4,7 @@ import { ThemeToggle } from './ThemeToggle'
 import { Logo } from '../ui/Logo'
 import { useOfflineStatus } from '../../hooks/useOfflineStatus'
 import { Icon } from '../ui/Icon'
-import { useTheme } from '../../contexts/ThemeContext'
+import { useTheme } from '../../hooks/useTheme'
 
 interface LayoutProps {
   children: React.ReactNode

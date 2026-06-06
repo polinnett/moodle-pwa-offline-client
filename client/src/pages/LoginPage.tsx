@@ -24,7 +24,7 @@ export const LoginPage = () => {
       const { token } = await login(username, password)
       localStorage.setItem('moodle_token', token)
       navigate('/home')
-    } catch (_) {
+    } catch {
       setError('Неверный логин или пароль')
     } finally {
       setLoading(false)
