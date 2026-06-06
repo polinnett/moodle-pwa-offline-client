@@ -6,11 +6,7 @@ from typing import Optional
 from datetime import datetime
 from database import get_db
 from models import Note, Course
-import hashlib
-
-def get_user_hash(request: Request) -> str:
-    token = request.headers.get("Authorization", "")
-    return hashlib.sha256(token.encode()).hexdigest()
+from utils import get_user_hash
 
 router = APIRouter(prefix="/notes", tags=["notes"])
 

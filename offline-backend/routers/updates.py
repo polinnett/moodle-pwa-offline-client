@@ -5,14 +5,10 @@ from database import get_db
 from models import CourseSnapshot, CourseUpdate
 from datetime import datetime
 from pydantic import BaseModel
-import hashlib
+from utils import get_user_hash
 import json
 
 router = APIRouter(prefix="/updates", tags=["updates"])
-
-def get_user_hash(request: Request) -> str:
-    token = request.headers.get("Authorization", "")
-    return hashlib.sha256(token.encode()).hexdigest()
 
 class SnapshotItem(BaseModel):
     id: int
