@@ -28,7 +28,7 @@ PWA-клиент для LMS Moodle с механизмами офлайн-дос
 ## Требования
 
 - Node.js 20+
-- Docker и Docker Compose 20+
+- Docker 20+
 - LMS Moodle – [исходный код](https://github.com/moodle/moodle) и [moodle-docker](https://github.com/moodlehq/moodle-docker) для локального развертывания
 
 ## Запуск
