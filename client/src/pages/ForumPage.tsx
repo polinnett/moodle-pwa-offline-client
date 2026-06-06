@@ -45,7 +45,9 @@ export const ForumPage = () => {
                   setDiscussions(parsed)
                   setForum({ id: 0, name: saved.name, intro: '', numdiscussions: 0, cmid: Number(moduleId) })
                 }
-              } catch {}
+              } catch {
+                // не удалось разобрать сохраненные данные форума
+              }
               setStatus('ok')
             } else {
               setStatus('error')

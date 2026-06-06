@@ -133,7 +133,9 @@ export const DownloadButton = ({
           })
           return
         }
-      } catch {}
+      } catch {
+        // не удалось загрузить данные форума, сохраняем пустую запись
+      }
       await saveLessonOffline({ id: module.id, courseId, name: module.name, html: '', savedAt: Date.now() })
       return
     }
@@ -155,7 +157,7 @@ export const DownloadButton = ({
 
       const allModules = sections.flatMap(s => s.modules).filter(m => m.visible !== 0)
       for (const module of allModules) {
-        try { await cacheModule(module) } catch {}
+        try { await cacheModule(module) } catch { /* пропускаем модуль если не удалось скачать */ }
       }
 
       setIsDownloaded(true)
@@ -186,7 +188,7 @@ export const DownloadButton = ({
       for (const module of allModules) {
         if (module.modname === 'url') continue
   
-        try { await deleteOfflineLesson(module.id) } catch {}
+        try { await deleteOfflineLesson(module.id) } catch { /* модуль мог не быть сохранен офлайн */ }
   
         const videoFile = module.contents?.find(c => c.mimetype === 'video/mp4')
         if (videoFile?.fileurl) {

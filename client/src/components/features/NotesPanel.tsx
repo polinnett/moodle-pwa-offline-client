@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { useOfflineStatus } from '../../hooks/useOfflineStatus'
 import { Icon } from '../ui/Icon'
 
@@ -87,7 +87,9 @@ export const NotesPanel = ({
           method: 'DELETE',
           headers: getAuthHeaders(),
         })
-      } catch {}
+      } catch {
+        // не удалось синхронизировать удаление, повторим при следующем подключении
+      }
     }
     localStorage.removeItem(pendingDeletesKey)
   }
@@ -103,7 +105,9 @@ export const NotesPanel = ({
           headers: getAuthHeaders(),
           body: JSON.stringify({ title: item.title, text: item.text }),
         })
-      } catch {}
+      } catch {
+        // не удалось синхронизировать изменение, повторим при следующем подключении
+      }
     }
     localStorage.removeItem(pendingUpdatesKey)
   }
@@ -123,7 +127,9 @@ export const NotesPanel = ({
           const updated = all.filter(n => n.synced)
           localStorage.setItem(offlineKey, JSON.stringify(updated))
         }
-      } catch {}
+      } catch {
+        // не удалось синхронизировать офлайн-заметки, повторим при следующем подключении
+      }
     }
   }
 
@@ -212,7 +218,9 @@ export const NotesPanel = ({
             localStorage.setItem(offlineKey, JSON.stringify(updated))
           }
           setNotes(prev => prev.filter(n => n.id !== noteId))
-        } catch {}
+        } catch {
+          // не удалось удалить заметку на сервере
+        }
       } else {
         const stored = localStorage.getItem(pendingDeletesKey)
         const deletes: PendingDelete[] = stored ? JSON.parse(stored) : []
@@ -251,7 +259,9 @@ export const NotesPanel = ({
             headers: getAuthHeaders(),
             body: JSON.stringify({ title: newTitle, text: newText }),
           })
-        } catch {}
+        } catch {
+          // не удалось обновить заметку на сервере
+        }
       } else {
         const stored = localStorage.getItem(pendingUpdatesKey)
         const updates: PendingUpdate[] = stored ? JSON.parse(stored) : []

@@ -56,7 +56,9 @@ export const CourseUpdates = ({
         await loadUpdates()
         setVisible(true)
       }
-    } catch {}
+    } catch {
+      // не удалось проверить обновления, сервер недоступен или нет соединения
+    }
     finally {
       isChecking.current = false
     }
@@ -70,7 +72,9 @@ export const CourseUpdates = ({
       const data = await res.json()
       setUpdates(data)
       if (data.length > 0) setVisible(true)
-    } catch {}
+    } catch {
+      // не удалось загрузить уведомления – сервер недоступен
+    }
   }
 
   const markAllRead = async () => {
@@ -81,7 +85,9 @@ export const CourseUpdates = ({
       })
       setUpdates([])
       setVisible(false)
-    } catch {}
+    } catch {
+      // не удалось отметить уведомления прочитанными
+    }
   }
 
   const markRead = async (id: number) => {
@@ -92,7 +98,9 @@ export const CourseUpdates = ({
       })
       setUpdates(prev => prev.filter(u => u.id !== id))
       if (updates.length <= 1) setVisible(false)
-    } catch {}
+    } catch {
+      // не удалось отметить уведомление прочитанным
+    }
   }
 
   useEffect(() => {

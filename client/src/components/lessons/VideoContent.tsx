@@ -10,10 +10,8 @@ import { TranscribeButton } from './TranscribeButton';
 
 export const VideoContent = ({ module, courseId }: { module: CourseModule; courseId: number }) => {
     const videoFile = module.contents?.find(c => c.mimetype === 'video/mp4')
-    if (!videoFile) return null
-  
-    const videoSrc = fileUrl(videoFile.fileurl)
-    const fileSizeMb = (videoFile.filesize / 1024 / 1024).toFixed(1)
+    const videoSrc = videoFile ? fileUrl(videoFile.fileurl) : ''
+    const fileSizeMb = videoFile ? (videoFile.filesize / 1024 / 1024).toFixed(1) : '0'
   
     const [cachedUrl, setCachedUrl] = useState<string | null>(null)
     const [caching, setCaching] = useState(false)
@@ -23,6 +21,7 @@ export const VideoContent = ({ module, courseId }: { module: CourseModule; cours
     const navigate = useNavigate()
   
     useEffect(() => {
+      if (!videoSrc) return
       const checkCache = async () => {
         const cache = await caches.open('moodle-videos')
         const match = await cache.match(videoSrc)
@@ -33,6 +32,8 @@ export const VideoContent = ({ module, courseId }: { module: CourseModule; cours
       }
       checkCache()
     }, [videoSrc])
+
+    if (!videoFile) return null
 
     if (!isOnline && !cachedUrl) {
       return (
