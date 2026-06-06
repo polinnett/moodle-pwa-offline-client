@@ -13,7 +13,7 @@ import { PdfContent } from '../components/lessons/PdfContent'
 import { QuizContent } from '../components/lessons/QuizContent'
 import { UrlContent } from '../components/lessons/UrlContent'
 import { VideoContent } from '../components/lessons/VideoContent'
-import { NotesPanel } from '../components/lessons/NotesPanel'
+import { NotesPanel } from '../components/features/NotesPanel'
 
 const getModuleType = (module: CourseModule) => {
   if (module.modname === 'url') return 'url'

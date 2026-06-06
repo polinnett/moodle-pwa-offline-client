@@ -10,7 +10,7 @@ import { Icon } from '../components/ui/Icon'
 import { OfflineBadge } from '../components/badges/OfflineBadge'
 import { OnlineOnlyBadge } from '../components/badges/OnlineOnlyBadge'
 import { fixImageUrls } from '../utils/moodle'
-import { CourseUpdates } from '../components/lessons/CourseUpdates'
+import { CourseUpdates } from '../components/features/CourseUpdates'
 
 const ModuleIcon = ({ modname }: { modname: string }) => {
   const icons: Record<string, string> = {

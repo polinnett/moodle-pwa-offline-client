@@ -5,7 +5,7 @@ import { getForumsByCourse, getForumDiscussions } from '../api/moodle'
 import { useOfflineStatus } from '../hooks/useOfflineStatus'
 import { getOfflineLesson } from '../db'
 import { Icon } from '../components/ui/Icon'
-import { NotesPanel } from '../components/lessons/NotesPanel'
+import { NotesPanel } from '../components/features/NotesPanel'
 
 interface Discussion {
   id: number
