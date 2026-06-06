@@ -1,19 +1,5 @@
 import Dexie, { type Table } from "dexie";
-import type { OfflineCourse } from "../types";
-
-export interface OfflineLesson {
-  id: number;
-  courseId: number;
-  name: string;
-  html: string;
-  savedAt: number;
-}
-
-export interface Transcription {
-  id: string;
-  text: string;
-  savedAt: number;
-}
+import type { OfflineCourse, OfflineLesson, Transcription } from "../types";
 
 class MoodleOfflineDB extends Dexie {
   courses!: Table<OfflineCourse>;

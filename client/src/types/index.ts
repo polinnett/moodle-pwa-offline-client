@@ -60,3 +60,17 @@ export interface OfflineCourse {
   sections: CourseSection[];
   fullyDownloaded?: boolean;
 }
+
+export interface OfflineLesson {
+  id: number;
+  courseId: number;
+  name: string;
+  html: string;
+  savedAt: number;
+}
+
+export interface Transcription {
+  id: string;
+  text: string;
+  savedAt: number;
+}

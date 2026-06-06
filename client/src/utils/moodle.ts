@@ -31,7 +31,7 @@ export const ensureCourseStructure = async (
       sections,
     });
   } catch (error) {
-    console.error("Failed to ensure course structure:", error);
+    console.error("Не удалось загрузить структуру курса:", error);
   }
 };
 
