@@ -92,3 +92,20 @@ export interface MoodleUser {
   profileimageurl: string;
   lastaccess: number;
 }
+
+export interface Discussion {
+  id: number;
+  name: string;
+  message: string;
+  userfullname: string;
+  created: number;
+  numreplies: number;
+}
+
+export interface Forum {
+  id: number;
+  name: string;
+  intro: string;
+  numdiscussions: number;
+  cmid: number;
+}

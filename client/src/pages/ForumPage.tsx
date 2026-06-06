@@ -6,26 +6,11 @@ import { useOfflineStatus } from '../hooks/useOfflineStatus'
 import { getOfflineLesson } from '../db'
 import { Icon } from '../components/ui/Icon'
 import { NotesPanel } from '../components/features/NotesPanel'
-
-interface Discussion {
-  id: number
-  name: string
-  message: string
-  userfullname: string
-  created: number
-  numreplies: number
-}
-
-interface Forum {
-  id: number
-  name: string
-  intro: string
-  numdiscussions: number
-  cmid: number
-}
+import type { Discussion, Forum } from '../types'
 
 export const ForumPage = () => {
   const { courseId, moduleId } = useParams<{ courseId: string; moduleId: string }>()
+  const navigate = useNavigate()
   const [forum, setForum] = useState<Forum | null>(null)
   const [discussions, setDiscussions] = useState<Discussion[]>([])
   const [selected, setSelected] = useState<Discussion | null>(null)
@@ -87,8 +72,6 @@ export const ForumPage = () => {
     })    
     setIsSaved(true)
   }
-
-  const navigate = useNavigate()
 
   const handleDelete = async () => {
     const { deleteOfflineLesson, getOfflineCourse, saveCourseOffline, deleteOfflineCourse, getOfflineLesson } = await import('../db')
