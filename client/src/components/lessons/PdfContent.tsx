@@ -6,7 +6,6 @@ import { ensureCourseStructure } from '../../utils/moodle';
 import { Icon } from '../ui/Icon'
 import { UnsupportedContent } from './UnsupportedContent';
 import { ModuleDescription } from './ModuleDescription';
-import { DownloadIcon } from '../ui/DownloadIcon';
 
 export const PdfContent = ({ module, courseId }: { module: CourseModule; courseId: number }) => {
   const token = localStorage.getItem('moodle_token')
@@ -198,7 +197,7 @@ export const PdfContent = ({ module, courseId }: { module: CourseModule; courseI
               </p>
               <p className="text-xs text-gray-400">{fileSizeMb} МБ</p>
             </div>
-            {!caching && <DownloadIcon />}
+            {!caching && <Icon name="download" size={16} />}
           </button>
         ) : null}
 

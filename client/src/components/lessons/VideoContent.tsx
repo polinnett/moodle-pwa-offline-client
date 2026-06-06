@@ -5,7 +5,6 @@ import { ensureCourseStructure, fileUrl } from '../../utils/moodle';
 import { useOfflineStatus } from '../../hooks/useOfflineStatus';
 import { Icon } from '../ui/Icon'
 import { ModuleDescription } from './ModuleDescription';
-import { DownloadIcon } from '../ui/DownloadIcon';
 import { extractAudio } from '../../api/moodle';
 import { TranscribeButton } from './TranscribeButton';
 
@@ -184,7 +183,7 @@ export const VideoContent = ({ module, courseId }: { module: CourseModule; cours
                 </p>
                 <p className="text-xs text-gray-400">{fileSizeMb} МБ • видео останется в браузере</p>
               </div>
-              {!caching && <DownloadIcon />}
+              {!caching && <Icon name="download" size={16} />}
             </button>
           )}
   
@@ -208,7 +207,7 @@ export const VideoContent = ({ module, courseId }: { module: CourseModule; cours
                 <p className="text-sm font-medium text-gray-800 dark:text-white">Скачать на устройство</p>
                 <p className="text-xs text-gray-400">{fileSizeMb} МБ • MP4</p>
               </div>
-              <DownloadIcon />
+              <Icon name="download" size={16} />
             </a>
           )}
   
@@ -226,7 +225,7 @@ export const VideoContent = ({ module, courseId }: { module: CourseModule; cours
                 </p>
                 <p className="text-xs text-gray-400">Только звук • MP3</p>
               </div>
-              {!extractingAudio && <DownloadIcon />}
+              {!extractingAudio && <Icon name="download" size={16} />}
             </button>
           )}
           <TranscribeButton videoUrl={videoSrc} videoName={module.name} />
