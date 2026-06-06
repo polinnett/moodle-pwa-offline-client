@@ -91,14 +91,29 @@ export const ForumPage = () => {
   const navigate = useNavigate()
 
   const handleDelete = async () => {
-    const { deleteOfflineLesson } = await import('../db')
+    const { deleteOfflineLesson, getOfflineCourse, saveCourseOffline, deleteOfflineCourse, getOfflineLesson } = await import('../db')
     await deleteOfflineLesson(Number(moduleId))
     setIsSaved(false)
-    const { getOfflineCourse, saveCourseOffline } = await import('../db')
+  
     const course = await getOfflineCourse(Number(courseId))
     if (course) {
-      await saveCourseOffline({ ...course, fullyDownloaded: false })
+      const hasUrlModules = course.sections
+        .flatMap(s => s.modules)
+        .some(m => m.modname === 'url')
+  
+      const hasAnyLesson = await Promise.all(
+        course.sections.flatMap(s => s.modules)
+          .filter(m => m.modname !== 'url')
+          .map(m => getOfflineLesson(m.id))
+      ).then(results => results.some(r => !!r))
+  
+      if (!hasAnyLesson && !hasUrlModules) {
+        await deleteOfflineCourse(Number(courseId))
+      } else {
+        await saveCourseOffline({ ...course, fullyDownloaded: false })
+      }
     }
+  
     if (!isOnline) navigate(`/courses/${courseId}`)
   }
 

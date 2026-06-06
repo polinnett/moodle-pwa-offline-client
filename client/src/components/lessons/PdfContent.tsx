@@ -93,11 +93,38 @@ export const PdfContent = ({ module, courseId }: { module: CourseModule; courseI
     const cache = await caches.open('moodle-files')
     await cache.delete(file.fileurl)
     setCachedUrl(null)
-    const { getOfflineCourse, saveCourseOffline } = await import('../../db')
+  
+    const { getOfflineCourse, saveCourseOffline, deleteOfflineCourse, getOfflineLesson } = await import('../../db')
     const course = await getOfflineCourse(courseId)
     if (course) {
-      await saveCourseOffline({ ...course, fullyDownloaded: false })
+      const hasUrlModules = course.sections
+        .flatMap(s => s.modules)
+        .some(m => m.modname === 'url')
+  
+      const hasAnyLesson = await Promise.all(
+        course.sections.flatMap(s => s.modules)
+          .filter(m => m.modname !== 'url')
+          .map(m => getOfflineLesson(m.id))
+      ).then(results => results.some(r => !!r))
+  
+      const pdfCache = await caches.open('moodle-files')
+      const hasPdfs = await Promise.all(
+        course.sections.flatMap(s => s.modules)
+          .filter(m => m.contents?.some(c => c.mimetype === 'application/pdf'))
+          .map(async m => {
+            const pf = m.contents?.find(c => c.mimetype === 'application/pdf')
+            if (!pf?.fileurl) return false
+            return !!(await pdfCache.match(pf.fileurl))
+          })
+      ).then(results => results.some(r => r))
+  
+      if (!hasAnyLesson && !hasPdfs && !hasUrlModules) {
+        await deleteOfflineCourse(courseId)
+      } else {
+        await saveCourseOffline({ ...course, fullyDownloaded: false })
+      }
     }
+  
     if (!isOnline) navigate(`/courses/${routeCourseId}`)
   }
 

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { getMyCourses } from '../api/moodle'
 import { getOfflineCourses } from '../db'
@@ -100,10 +100,11 @@ export const CoursesPage = () => {
   const navigate = useNavigate()
   const isOnline = useOfflineStatus()
   const [offlineCourses, setOfflineCourses] = useState<OfflineCourse[]>([])
+  const location = useLocation()
 
   useEffect(() => {
     getOfflineCourses().then(setOfflineCourses)
-  }, [])
+  }, [location])
 
   const { data: courses, isLoading, error } = useQuery({
     queryKey: ['courses'],

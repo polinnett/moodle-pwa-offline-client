@@ -344,13 +344,19 @@ const DownloadButton = ({
   const handleDelete = async () => {
     setLoading(true)
     try {
-      const course = await getOfflineCourse(courseId)
-      if (course) {
-        await saveCourseOffline({ ...course, fullyDownloaded: false })
+      const allModules = sections.flatMap(s => s.modules)
+      const hasUrlModules = allModules.some(m => m.modname === 'url')
+  
+      if (hasUrlModules) {
+        const course = await getOfflineCourse(courseId)
+        if (course) {
+          await saveCourseOffline({ ...course, fullyDownloaded: false })
+        }
+      } else {
+        await deleteOfflineCourse(courseId)
       }
   
       const { deleteOfflineLesson } = await import('../db')
-      const allModules = sections.flatMap(s => s.modules)
   
       for (const module of allModules) {
         if (module.modname === 'url') continue

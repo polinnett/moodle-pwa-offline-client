@@ -99,11 +99,40 @@ export const VideoContent = ({ module, courseId }: { module: CourseModule; cours
       const cache = await caches.open('moodle-videos')
       await cache.delete(videoSrc)
       setCachedUrl(null)
-      const { getOfflineCourse, saveCourseOffline } = await import('../../db')
+    
+      const { getOfflineCourse, saveCourseOffline, deleteOfflineCourse, getOfflineLesson } = await import('../../db')
       const course = await getOfflineCourse(courseId)
       if (course) {
-        await saveCourseOffline({ ...course, fullyDownloaded: false })
+        const hasUrlModules = course.sections
+          .flatMap(s => s.modules)
+          .some(m => m.modname === 'url')
+    
+        const hasAnyLesson = await Promise.all(
+          course.sections.flatMap(s => s.modules)
+            .filter(m => m.modname !== 'url')
+            .map(m => getOfflineLesson(m.id))
+        ).then(results => results.some(r => !!r))
+    
+        const videoCache = await caches.open('moodle-videos')
+        const hasVideos = await Promise.all(
+          course.sections.flatMap(s => s.modules)
+            .filter(m => m.contents?.some(c => c.mimetype === 'video/mp4'))
+            .map(async m => {
+              const vf = m.contents?.find(c => c.mimetype === 'video/mp4')
+              if (!vf?.fileurl) return false
+              const token = localStorage.getItem('moodle_token')
+              const url = `${vf.fileurl.replace('http://localhost:8000', '/moodle-api')}&token=${token}`
+              return !!(await videoCache.match(url))
+            })
+        ).then(results => results.some(r => r))
+    
+        if (!hasAnyLesson && !hasVideos && !hasUrlModules) {
+          await deleteOfflineCourse(courseId)
+        } else {
+          await saveCourseOffline({ ...course, fullyDownloaded: false })
+        }
       }
+    
       if (!isOnline) navigate(`/courses/${routeCourseId}`)
     }
   

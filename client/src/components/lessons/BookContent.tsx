@@ -115,7 +115,7 @@ export const BookContent = ({ module, courseId }: { module: CourseModule; course
     }
   
     const handleDelete = async () => {
-      const { deleteOfflineLesson, getOfflineLesson: getLesson } = await import('../../db')
+      const { deleteOfflineLesson, getOfflineLesson: getLesson, getOfflineCourse, saveCourseOffline, deleteOfflineCourse } = await import('../../db')
       const saved = await getLesson(module.id)
       if (saved?.html) {
         const chapterCount = parseInt(saved.html)
@@ -127,11 +127,26 @@ export const BookContent = ({ module, courseId }: { module: CourseModule; course
       }
       await deleteOfflineLesson(module.id)
       setIsSaved(false)
-      const { getOfflineCourse, saveCourseOffline } = await import('../../db')
+    
       const course = await getOfflineCourse(courseId)
       if (course) {
-        await saveCourseOffline({ ...course, fullyDownloaded: false })
+        const hasUrlModules = course.sections
+          .flatMap(s => s.modules)
+          .some(m => m.modname === 'url')
+    
+        const hasAnyLesson = await Promise.all(
+          course.sections.flatMap(s => s.modules)
+            .filter(m => m.modname !== 'url')
+            .map(m => getLesson(m.id))
+        ).then(results => results.some(r => !!r))
+    
+        if (!hasAnyLesson && !hasUrlModules) {
+          await deleteOfflineCourse(courseId)
+        } else {
+          await saveCourseOffline({ ...course, fullyDownloaded: false })
+        }
       }
+    
       if (!isOnline) navigate(`/courses/${routeCourseId}`)
     }
 
