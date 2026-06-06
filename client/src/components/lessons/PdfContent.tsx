@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useOfflineStatus } from '../../hooks/useOfflineStatus';
 import type { CourseModule } from '../../types'
-import { ensureCourseStructure } from '../../utils/moodle';
+import { ensureCourseStructure, proxyUrl } from '../../utils/moodle';
 import { Icon } from '../ui/Icon'
 import { UnsupportedContent } from './UnsupportedContent';
 import { ModuleDescription } from './ModuleDescription';
@@ -15,7 +15,6 @@ export const PdfContent = ({ module, courseId }: { module: CourseModule; courseI
   const [caching, setCaching] = useState(false)
   const [cacheProgress, setCacheProgress] = useState(0)
   const navigate = useNavigate()
-  const { courseId: routeCourseId } = useParams()
 
   useEffect(() => {
     const checkCache = async () => {
@@ -32,8 +31,7 @@ export const PdfContent = ({ module, courseId }: { module: CourseModule; courseI
 
   if (!file) return <UnsupportedContent module={module} />
 
-  const proxyUrl = file.fileurl?.replace('http://localhost:8000', '/moodle-api')
-  const url = `${proxyUrl}&token=${token}`
+  const url = `${proxyUrl(file.fileurl)}&token=${token}`
   const openUrl = cachedUrl ?? url
   const fileSizeMb = (file.filesize / 1024 / 1024).toFixed(2)
 
@@ -124,7 +122,7 @@ export const PdfContent = ({ module, courseId }: { module: CourseModule; courseI
       }
     }
   
-    if (!isOnline) navigate(`/courses/${routeCourseId}`)
+    if (!isOnline) navigate(`/courses/${courseId}`)
   }
 
   return (

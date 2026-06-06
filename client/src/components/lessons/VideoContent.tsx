@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import type { CourseModule } from '../../types'
 import { ensureCourseStructure, fileUrl } from '../../utils/moodle';
 import { useOfflineStatus } from '../../hooks/useOfflineStatus';
@@ -21,7 +21,6 @@ export const VideoContent = ({ module, courseId }: { module: CourseModule; cours
     const [extractingAudio, setExtractingAudio] = useState(false)
     const isOnline = useOfflineStatus()
     const navigate = useNavigate()
-    const { courseId: routeCourseId } = useParams()
   
     useEffect(() => {
       const checkCache = async () => {
@@ -132,7 +131,7 @@ export const VideoContent = ({ module, courseId }: { module: CourseModule; cours
         }
       }
     
-      if (!isOnline) navigate(`/courses/${routeCourseId}`)
+      if (!isOnline) navigate(`/courses/${courseId}`)
     }
   
     const handleExtractAudio = async () => {

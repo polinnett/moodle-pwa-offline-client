@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { useOfflineStatus } from '../../hooks/useOfflineStatus';
 import { getOfflineLesson } from '../../db'
 import type { CourseModule } from '../../types'
@@ -17,7 +17,6 @@ export const BookContent = ({ module, courseId }: { module: CourseModule; course
     const isOnline = useOfflineStatus()
     const [saving, setSaving] = useState(false)
     const navigate = useNavigate()
-    const { courseId: routeCourseId } = useParams()
   
     useEffect(() => {
       getOfflineLesson(module.id).then(l => setIsSaved(!!l))
@@ -147,7 +146,7 @@ export const BookContent = ({ module, courseId }: { module: CourseModule; course
         }
       }
     
-      if (!isOnline) navigate(`/courses/${routeCourseId}`)
+      if (!isOnline) navigate(`/courses/${courseId}`)
     }
 
     if (notSaved) {
