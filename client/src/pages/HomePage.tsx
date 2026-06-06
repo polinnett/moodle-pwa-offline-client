@@ -37,6 +37,8 @@ export const HomePage = () => {
             { icon: 'transcribe', title: 'Расшифровка видео', desc: 'Автоматически переводите видеолекции в текст и сохраняйте в PDF' },
             { icon: 'quiz', title: 'Тесты', desc: 'Проходите тесты с поддержкой разных типов вопросов' },
             { icon: 'theme', title: 'Темная тема', desc: 'Удобный интерфейс в светлой и темной теме' },
+            { icon: 'note', title: 'Заметки к лекциям', desc: 'Создавайте заметки прямо в уроке – они синхронизируются между устройствами' },
+            { icon: 'notification', title: 'Уведомления об изменениях', desc: 'Получайте уведомления когда преподаватель обновляет материалы курса' },
             ].map(item => (
             <div key={item.title} className="flex items-start gap-3">
                 <Icon name={item.icon} size={24} className="shrink-0 mt-0.5" />
