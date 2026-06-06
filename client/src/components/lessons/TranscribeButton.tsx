@@ -1,65 +1,77 @@
-import { useState, useRef, useEffect } from 'react';
-import { transcribeVideo } from '../../api/moodle';
-import { Icon } from '../ui/Icon';
-import { saveTranscription, getTranscription } from '../../db'
-import { useOfflineStatus } from '../../hooks/useOfflineStatus'
+import { useState, useRef, useEffect } from "react";
+import { transcribeVideo } from "../../api/moodle";
+import { Icon } from "../ui/Icon";
+import { saveTranscription, getTranscription } from "../../db";
+import { useOfflineStatus } from "../../hooks/useOfflineStatus";
 
-export const TranscribeButton = ({ videoUrl, videoName }: { videoUrl: string; videoName: string }) => {
-    const [status, setStatus] = useState<'idle' | 'loading' | 'done' | 'error'>('idle')
-    const [text, setText] = useState('')
-    const [elapsed, setElapsed] = useState(0)
-    const abortRef = useRef<AbortController | null>(null)
-    const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
-    const [language, setLanguage] = useState('ru')
-    const isOnline = useOfflineStatus()
+export const TranscribeButton = ({
+  videoUrl,
+  videoName,
+}: {
+  videoUrl: string;
+  videoName: string;
+}) => {
+  const [status, setStatus] = useState<"idle" | "loading" | "done" | "error">(
+    "idle",
+  );
+  const [text, setText] = useState("");
+  const [elapsed, setElapsed] = useState(0);
+  const abortRef = useRef<AbortController | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [language, setLanguage] = useState("ru");
+  const isOnline = useOfflineStatus();
 
-    useEffect(() => {
-      getTranscription(videoUrl).then(saved => {
-        if (saved?.text) {
-          setText(saved.text)
-          setStatus('done')
-        }
-      })
-    }, [videoUrl])
-  
-    const handleTranscribe = async () => {
-      setStatus('loading')
-      setElapsed(0)
-    
-      timerRef.current = setInterval(() => {
-        setElapsed(prev => prev + 1)
-      }, 1000)
-    
-      abortRef.current = new AbortController()
-    
-      try {
-        const result = await transcribeVideo(videoUrl, abortRef.current.signal, language)
-        setText(result)
-        await saveTranscription(videoUrl, result)
-        setStatus('done')
-      } catch (err: unknown) {
-        if (err instanceof Error && err.name === 'AbortError') {
-          setStatus('idle')
-        } else {
-          setStatus('error')
-        }
-      } finally {
-        if (timerRef.current) clearInterval(timerRef.current)
+  useEffect(() => {
+    getTranscription(videoUrl).then((saved) => {
+      if (saved?.text) {
+        setText(saved.text);
+        setStatus("done");
       }
+    });
+  }, [videoUrl]);
+
+  const handleTranscribe = async () => {
+    setStatus("loading");
+    setElapsed(0);
+
+    timerRef.current = setInterval(() => {
+      setElapsed((prev) => prev + 1);
+    }, 1000);
+
+    abortRef.current = new AbortController();
+
+    try {
+      const result = await transcribeVideo(
+        videoUrl,
+        abortRef.current.signal,
+        language,
+      );
+      setText(result);
+      await saveTranscription(videoUrl, result);
+      setStatus("done");
+    } catch (err: unknown) {
+      if (err instanceof Error && err.name === "AbortError") {
+        setStatus("idle");
+      } else {
+        setStatus("error");
+      }
+    } finally {
+      if (timerRef.current) clearInterval(timerRef.current);
     }
-    
-    const handleCancel = () => {
-      abortRef.current?.abort()
-      if (timerRef.current) clearInterval(timerRef.current)
-      setStatus('idle')
-      setElapsed(0)
-    }
-  
-    const handleSavePDF = () => {    
-      const printWindow = window.open('', '_blank')
-      if (!printWindow) return
-    
-      printWindow.document.write(`
+  };
+
+  const handleCancel = () => {
+    abortRef.current?.abort();
+    if (timerRef.current) clearInterval(timerRef.current);
+    setStatus("idle");
+    setElapsed(0);
+  };
+
+  const handleSavePDF = () => {
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) return;
+
+    printWindow.document.write(`
         <!DOCTYPE html>
         <html>
           <head>
@@ -93,184 +105,210 @@ export const TranscribeButton = ({ videoUrl, videoName }: { videoUrl: string; vi
           <body>
             <h1>${videoName}</h1>
             <div class="meta">Расшифровка видеолекции • Moodle PWA</div>
-            <p>${text.replace(/\n/g, '<br>')}</p>
+            <p>${text.replace(/\n/g, "<br>")}</p>
           </body>
         </html>
-      `)
-    
-      printWindow.document.close()
-    
-      setTimeout(() => {
-        printWindow.print()
-        printWindow.close()
-      }, 500)
-    }
-  
-    if (status === 'idle') {
-      return (
-        <div className="space-y-2">
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-5">
-            Выберите язык для расшифровки (по умолчанию – русский)
-          </p>
-          <div className="relative">
-            <select
-              value={language}
-              onChange={e => setLanguage(e.target.value)}
-              disabled={!isOnline}
-              className="w-full text-sm rounded-lg px-3 py-2 pr-8 cursor-pointer
+      `);
+
+    printWindow.document.close();
+
+    setTimeout(() => {
+      printWindow.print();
+      printWindow.close();
+    }, 500);
+  };
+
+  if (status === "idle") {
+    return (
+      <div className="space-y-2">
+        <p className="text-xs text-gray-500 dark:text-gray-400 mt-5">
+          Выберите язык для расшифровки (по умолчанию – русский)
+        </p>
+        <div className="relative">
+          <select
+            value={language}
+            onChange={(e) => setLanguage(e.target.value)}
+            disabled={!isOnline}
+            className="w-full text-sm rounded-lg px-3 py-2 pr-8 cursor-pointer
                 appearance-none
                 bg-white dark:bg-gray-700
                 text-gray-800 dark:text-gray-200
                 focus:border-green-500 outline-none
                 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <option value="ru">Русский</option>
+            <option value="en">English</option>
+          </select>
+          <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="text-gray-400"
             >
-              <option value="ru">Русский</option>
-              <option value="en">English</option>
-            </select>
-            <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18"
-                viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-                className="text-gray-400"
-              >
-                <polyline points="6 9 12 15 18 9"/>
-              </svg>
-            </div>
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
           </div>
-          <button
-            onClick={handleTranscribe}
-            disabled={!isOnline}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl
+        </div>
+        <button
+          onClick={handleTranscribe}
+          disabled={!isOnline}
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl
               transition-colors cursor-pointer
               bg-green-50 hover:bg-green-100 dark:bg-gray-700 dark:hover:bg-gray-600
               disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <Icon name="transcribe" size={20} />
+          <div className="flex-1 text-left">
+            <p className="text-sm font-medium text-gray-800 dark:text-white">
+              Расшифровка текстом
+            </p>
+            <p className="text-xs text-gray-400">Whisper AI • только онлайн</p>
+          </div>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="text-green-500 shrink-0"
           >
-            <Icon name="transcribe" size={20} />
-            <div className="flex-1 text-left">
+            <circle cx="12" cy="12" r="10" />
+            <polygon points="10 8 16 12 10 16 10 8" fill="currentColor" />
+          </svg>
+        </button>
+      </div>
+    );
+  }
+
+  if (status === "loading") {
+    const minutes = Math.floor(elapsed / 60);
+    const seconds = elapsed % 60;
+    const timeStr = `${minutes}:${seconds.toString().padStart(2, "0")}`;
+
+    return (
+      <div className="px-4 py-3 rounded-xl bg-green-50 dark:bg-gray-700 space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Icon name="clock" size={20} />
+            <div>
               <p className="text-sm font-medium text-gray-800 dark:text-white">
-                Расшифровка текстом
+                Расшифровываем... {timeStr}
               </p>
-              <p className="text-xs text-gray-400">Whisper AI • только онлайн</p>
+              <p className="text-xs text-gray-400">
+                Обычно занимает 1-3 минуты
+              </p>
             </div>
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
-              viewBox="0 0 24 24" fill="none" stroke="currentColor"
-              strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-              className="text-green-500 shrink-0">
-              <circle cx="12" cy="12" r="10"/>
-              <polygon points="10 8 16 12 10 16 10 8" fill="currentColor"/>
-            </svg>
-          </button>
-        </div>
-      )
-    }
-  
-    if (status === 'loading') {
-      const minutes = Math.floor(elapsed / 60)
-      const seconds = elapsed % 60
-      const timeStr = `${minutes}:${seconds.toString().padStart(2, '0')}`
-    
-      return (
-        <div className="px-4 py-3 rounded-xl bg-green-50 dark:bg-gray-700 space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Icon name="clock" size={20} />
-              <div>
-                <p className="text-sm font-medium text-gray-800 dark:text-white">
-                  Расшифровываем... {timeStr}
-                </p>
-                <p className="text-xs text-gray-400">
-                  Обычно занимает 1-3 минуты
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={handleCancel}
-              className="text-xs px-3 py-1.5 rounded-lg cursor-pointer
+          </div>
+          <button
+            onClick={handleCancel}
+            className="text-xs px-3 py-1.5 rounded-lg cursor-pointer
                 transition-colors font-medium
                 bg-red-100 text-red-600 hover:bg-red-200
                 dark:bg-red-900/30 dark:text-red-400"
-            >
-              Отменить
-            </button>
-          </div>
-    
-          <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-1.5 overflow-hidden">
-            <div className="h-1.5 rounded-full bg-green-500
-              animate-[progress_2s_ease-in-out_infinite]"
-              style={{
-                width: '40%',
-                animation: 'pulse-bar 1.5s ease-in-out infinite alternate',
-              }}
-            />
-          </div>
+          >
+            Отменить
+          </button>
         </div>
-      )
-    }
-  
-    if (status === 'error') {
-      return (
-        <button
-          onClick={handleTranscribe}
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl
-            cursor-pointer bg-red-50 dark:bg-red-900/20"
-        >
-          <Icon name="default" size={20} />
-          <div className="flex-1 text-left">
-            <p className="text-sm font-medium text-red-600 dark:text-red-400">
-              Ошибка расшифровки
-            </p>
-            <p className="text-xs text-gray-400">Нажмите чтобы попробовать снова</p>
-          </div>
-        </button>
-      )
-    }
-  
+
+        <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-1.5 overflow-hidden">
+          <div
+            className="h-1.5 rounded-full bg-green-500
+              animate-[progress_2s_ease-in-out_infinite]"
+            style={{
+              width: "40%",
+              animation: "pulse-bar 1.5s ease-in-out infinite alternate",
+            }}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  if (status === "error") {
     return (
-      <div className="space-y-2">
-        <div className="px-4 py-3 rounded-xl bg-green-50 dark:bg-gray-700">
+      <button
+        onClick={handleTranscribe}
+        className="w-full flex items-center gap-3 px-4 py-3 rounded-xl
+            cursor-pointer bg-red-50 dark:bg-red-900/20"
+      >
+        <Icon name="default" size={20} />
+        <div className="flex-1 text-left">
+          <p className="text-sm font-medium text-red-600 dark:text-red-400">
+            Ошибка расшифровки
+          </p>
+          <p className="text-xs text-gray-400">
+            Нажмите чтобы попробовать снова
+          </p>
+        </div>
+      </button>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="px-4 py-3 rounded-xl bg-green-50 dark:bg-gray-700">
         <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2">
-              <Icon name="ok" size={20} />
-              <p className="text-sm font-medium text-gray-800 dark:text-white">
-                Расшифровка готова
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={async () => {
-                  const { deleteTranscription } = await import('../../db')
-                  await deleteTranscription(videoUrl)
-                  setText('')
-                  setStatus('idle')
-                }}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg
+          <div className="flex items-center gap-2">
+            <Icon name="ok" size={20} />
+            <p className="text-sm font-medium text-gray-800 dark:text-white">
+              Расшифровка готова
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={async () => {
+                const { deleteTranscription } = await import("../../db");
+                await deleteTranscription(videoUrl);
+                setText("");
+                setStatus("idle");
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg
                   text-xs font-medium cursor-pointer transition-colors
                   bg-red-100 text-red-600 hover:bg-red-200
                   dark:bg-red-900/30 dark:text-red-400"
-              >
-                Удалить
-              </button>
-              <button
-                onClick={handleSavePDF}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg
+            >
+              Удалить
+            </button>
+            <button
+              onClick={handleSavePDF}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg
                   text-xs font-medium cursor-pointer transition-colors
                   bg-green-500 hover:bg-green-600 text-white"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12"
-                  viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                  strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                  <polyline points="7 10 12 15 17 10"/>
-                  <line x1="12" y1="15" x2="12" y2="3"/>
-                </svg>
-                Скачать PDF
-              </button>
-            </div>
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+              Скачать PDF
+            </button>
           </div>
-          <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-3 leading-relaxed">
-            {text}
-          </p>
         </div>
+        <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-3 leading-relaxed">
+          {text}
+        </p>
       </div>
-    )
-}
+    </div>
+  );
+};

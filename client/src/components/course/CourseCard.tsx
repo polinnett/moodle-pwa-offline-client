@@ -1,6 +1,6 @@
-import type { Course } from '../../types'
-import { FullOfflineBadge } from '../badges/FullOfflineBadge'
-import { OfflineBadge } from '../badges/OfflineBadge'
+import type { Course } from "../../types";
+import { FullOfflineBadge } from "../badges/FullOfflineBadge";
+import { OfflineBadge } from "../badges/OfflineBadge";
 
 export const CourseCard = ({
   course,
@@ -9,21 +9,24 @@ export const CourseCard = ({
   onClick,
   isOnline,
 }: {
-  course: Course
-  isDownloaded: boolean
-  isFullyDownloaded: boolean
-  onClick: () => void
-  isOnline: boolean
+  course: Course;
+  isDownloaded: boolean;
+  isFullyDownloaded: boolean;
+  onClick: () => void;
+  isOnline: boolean;
 }) => {
-  const token = localStorage.getItem('moodle_token')
-  const imageUrl = isOnline && course.overviewfiles?.[0]?.fileurl
-    ? `${course.overviewfiles[0].fileurl}?token=${token}`
-    : null
+  const token = localStorage.getItem("moodle_token");
+  const imageUrl =
+    isOnline && course.overviewfiles?.[0]?.fileurl
+      ? `${course.overviewfiles[0].fileurl}?token=${token}`
+      : null;
 
   return (
     <button
       onClick={onClick}
-      style={{ '--hover-border': 'var(--color-primary-600)' } as React.CSSProperties}
+      style={
+        { "--hover-border": "var(--color-primary-600)" } as React.CSSProperties
+      }
       className="w-full text-left rounded-2xl overflow-hidden transition-all cursor-pointer
           bg-white dark:bg-gray-800
           border-2 border-transparent
@@ -35,7 +38,7 @@ export const CourseCard = ({
           focus:outline-none
           focus:ring-2
           focus:ring-green-500/50"
-      >
+    >
       {imageUrl ? (
         <div className="w-full h-48 overflow-hidden">
           <img
@@ -45,7 +48,8 @@ export const CourseCard = ({
           />
         </div>
       ) : (
-        <div className="w-full h-48 bg-gradient-to-br from-green-400 to-green-600
+        <div
+          className="w-full h-48 bg-gradient-to-br from-green-400 to-green-600
           dark:from-green-700 dark:to-green-900"
         />
       )}
@@ -59,10 +63,11 @@ export const CourseCard = ({
             {course.shortname}
           </p>
           {course.summary && (
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-2
+            <p
+              className="text-sm text-gray-500 dark:text-gray-400 mt-2
               line-clamp-2 leading-relaxed"
               dangerouslySetInnerHTML={{
-                __html: course.summary.replace(/<[^>]*>/g, '')
+                __html: course.summary.replace(/<[^>]*>/g, ""),
               }}
             />
           )}
@@ -75,5 +80,5 @@ export const CourseCard = ({
         ) : null}
       </div>
     </button>
-  )
-}
+  );
+};

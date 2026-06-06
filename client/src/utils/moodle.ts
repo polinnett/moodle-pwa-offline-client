@@ -10,7 +10,7 @@ export const fileUrl = (url: string) => {
 };
 
 export const ensureCourseStructure = async (
-  courseId: number
+  courseId: number,
 ): Promise<void> => {
   if (!courseId) return;
   const existing = await getOfflineCourse(courseId);

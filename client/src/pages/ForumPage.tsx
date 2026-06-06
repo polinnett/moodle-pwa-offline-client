@@ -1,123 +1,149 @@
-import { useState, useEffect } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
-import { Layout } from '../components/layout/Layout'
-import { getForumsByCourse, getForumDiscussions } from '../api/moodle'
-import { useOfflineStatus } from '../hooks/useOfflineStatus'
-import { getOfflineLesson } from '../db'
-import { Icon } from '../components/ui/Icon'
-import { NotesPanel } from '../components/features/NotesPanel'
-import type { Discussion, Forum } from '../types'
+import { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { Layout } from "../components/layout/Layout";
+import { getForumsByCourse, getForumDiscussions } from "../api/moodle";
+import { useOfflineStatus } from "../hooks/useOfflineStatus";
+import { getOfflineLesson } from "../db";
+import { Icon } from "../components/ui/Icon";
+import { NotesPanel } from "../components/features/NotesPanel";
+import type { Discussion, Forum } from "../types";
 
 export const ForumPage = () => {
-  const { courseId, moduleId } = useParams<{ courseId: string; moduleId: string }>()
-  const navigate = useNavigate()
-  const [forum, setForum] = useState<Forum | null>(null)
-  const [discussions, setDiscussions] = useState<Discussion[]>([])
-  const [selected, setSelected] = useState<Discussion | null>(null)
-  const [status, setStatus] = useState<'loading' | 'ok' | 'error'>('loading')
-  const [isSaved, setIsSaved] = useState(false)
-  const isOnline = useOfflineStatus()
+  const { courseId, moduleId } = useParams<{
+    courseId: string;
+    moduleId: string;
+  }>();
+  const navigate = useNavigate();
+  const [forum, setForum] = useState<Forum | null>(null);
+  const [discussions, setDiscussions] = useState<Discussion[]>([]);
+  const [selected, setSelected] = useState<Discussion | null>(null);
+  const [status, setStatus] = useState<"loading" | "ok" | "error">("loading");
+  const [isSaved, setIsSaved] = useState(false);
+  const isOnline = useOfflineStatus();
 
   useEffect(() => {
-    getOfflineLesson(Number(moduleId)).then(l => setIsSaved(!!l))
-  }, [moduleId])
+    getOfflineLesson(Number(moduleId)).then((l) => setIsSaved(!!l));
+  }, [moduleId]);
 
   useEffect(() => {
     const init = async () => {
       try {
-        const forums = await getForumsByCourse(Number(courseId))
-        const found = forums.find((f: Forum) => f.cmid === Number(moduleId))
-        if (!found) throw new Error('Форум не найден')
-        setForum(found)
-        const disc = await getForumDiscussions(found.id)
-        setDiscussions(disc)
-        setStatus('ok')
+        const forums = await getForumsByCourse(Number(courseId));
+        const found = forums.find((f: Forum) => f.cmid === Number(moduleId));
+        if (!found) throw new Error("Форум не найден");
+        setForum(found);
+        const disc = await getForumDiscussions(found.id);
+        setDiscussions(disc);
+        setStatus("ok");
       } catch {
-          try {
-            const saved = await getOfflineLesson(Number(moduleId))
-            if (saved) {
-              try {
-                const parsed = JSON.parse(saved.html)
-                if (parsed.discussions && Array.isArray(parsed.discussions)) {
-                  setDiscussions(parsed.discussions)
-                  setForum({ id: 0, name: saved.name, intro: parsed.intro ?? '', numdiscussions: 0, cmid: Number(moduleId) })
-                } else if (Array.isArray(parsed)) {
-                  setDiscussions(parsed)
-                  setForum({ id: 0, name: saved.name, intro: '', numdiscussions: 0, cmid: Number(moduleId) })
-                }
-              } catch {
-                // не удалось разобрать сохраненные данные форума
+        try {
+          const saved = await getOfflineLesson(Number(moduleId));
+          if (saved) {
+            try {
+              const parsed = JSON.parse(saved.html);
+              if (parsed.discussions && Array.isArray(parsed.discussions)) {
+                setDiscussions(parsed.discussions);
+                setForum({
+                  id: 0,
+                  name: saved.name,
+                  intro: parsed.intro ?? "",
+                  numdiscussions: 0,
+                  cmid: Number(moduleId),
+                });
+              } else if (Array.isArray(parsed)) {
+                setDiscussions(parsed);
+                setForum({
+                  id: 0,
+                  name: saved.name,
+                  intro: "",
+                  numdiscussions: 0,
+                  cmid: Number(moduleId),
+                });
               }
-              setStatus('ok')
-            } else {
-              setStatus('error')
+            } catch {
+              // не удалось разобрать сохраненные данные форума
             }
-          } catch {
-            setStatus('error')
+            setStatus("ok");
+          } else {
+            setStatus("error");
           }
+        } catch {
+          setStatus("error");
         }
-    }
-    init()
-  }, [courseId, moduleId])
+      }
+    };
+    init();
+  }, [courseId, moduleId]);
 
   const handleSave = async () => {
-    const { saveLessonOffline } = await import('../db')
-    const { ensureCourseStructure } = await import('../utils/moodle')
-    await ensureCourseStructure(Number(courseId))
-    
+    const { saveLessonOffline } = await import("../db");
+    const { ensureCourseStructure } = await import("../utils/moodle");
+    await ensureCourseStructure(Number(courseId));
+
     await saveLessonOffline({
       id: Number(moduleId),
       courseId: Number(courseId),
-      name: forum?.name ?? '',
-      html: JSON.stringify({ intro: forum?.intro ?? '', discussions }),
+      name: forum?.name ?? "",
+      html: JSON.stringify({ intro: forum?.intro ?? "", discussions }),
       savedAt: Date.now(),
-    })    
-    setIsSaved(true)
-  }
+    });
+    setIsSaved(true);
+  };
 
   const handleDelete = async () => {
-    const { deleteOfflineLesson, getOfflineCourse, saveCourseOffline, deleteOfflineCourse, getOfflineLesson } = await import('../db')
-    await deleteOfflineLesson(Number(moduleId))
-    setIsSaved(false)
-  
-    const course = await getOfflineCourse(Number(courseId))
+    const {
+      deleteOfflineLesson,
+      getOfflineCourse,
+      saveCourseOffline,
+      deleteOfflineCourse,
+      getOfflineLesson,
+    } = await import("../db");
+    await deleteOfflineLesson(Number(moduleId));
+    setIsSaved(false);
+
+    const course = await getOfflineCourse(Number(courseId));
     if (course) {
       const hasUrlModules = course.sections
-        .flatMap(s => s.modules)
-        .some(m => m.modname === 'url')
-  
+        .flatMap((s) => s.modules)
+        .some((m) => m.modname === "url");
+
       const hasAnyLesson = await Promise.all(
-        course.sections.flatMap(s => s.modules)
-          .filter(m => m.modname !== 'url')
-          .map(m => getOfflineLesson(m.id))
-      ).then(results => results.some(r => !!r))
-  
+        course.sections
+          .flatMap((s) => s.modules)
+          .filter((m) => m.modname !== "url")
+          .map((m) => getOfflineLesson(m.id)),
+      ).then((results) => results.some((r) => !!r));
+
       if (!hasAnyLesson && !hasUrlModules) {
-        await deleteOfflineCourse(Number(courseId))
+        await deleteOfflineCourse(Number(courseId));
       } else {
-        await saveCourseOffline({ ...course, fullyDownloaded: false })
+        await saveCourseOffline({ ...course, fullyDownloaded: false });
       }
     }
-  
-    if (!isOnline) navigate(`/courses/${courseId}`)
-  }
 
-  if (status === 'loading') {
+    if (!isOnline) navigate(`/courses/${courseId}`);
+  };
+
+  if (status === "loading") {
     return (
       <Layout title="Форум" showBack>
         <div className="animate-pulse space-y-4">
-          {[1, 2, 3].map(i => (
-            <div key={i} className="h-20 rounded-2xl bg-gray-200 dark:bg-gray-700"/>
+          {[1, 2, 3].map((i) => (
+            <div
+              key={i}
+              className="h-20 rounded-2xl bg-gray-200 dark:bg-gray-700"
+            />
           ))}
         </div>
       </Layout>
-    )
+    );
   }
 
-  if (status === 'error') {
+  if (status === "error") {
     return (
       <Layout title="Форум" showBack>
-        <div className="rounded-2xl p-6 text-center
+        <div
+          className="rounded-2xl p-6 text-center
           bg-white dark:bg-gray-800
           border border-green-100 dark:border-gray-700"
         >
@@ -125,22 +151,26 @@ export const ForumPage = () => {
             <Icon name="default" size={48} />
           </div>
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            {!navigator.onLine ? 'Форум не сохранен для офлайна' : 'Не удалось загрузить форум'}
+            {!navigator.onLine
+              ? "Форум не сохранен для офлайна"
+              : "Не удалось загрузить форум"}
           </p>
         </div>
       </Layout>
-    )
+    );
   }
 
   if (selected) {
     return (
       <Layout title={selected.name} showBack>
-        <div className="rounded-2xl p-6
+        <div
+          className="rounded-2xl p-6
           bg-white dark:bg-gray-800
           border border-green-100 dark:border-gray-700 space-y-4"
         >
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-full bg-green-100 dark:bg-green-900
+            <div
+              className="w-9 h-9 rounded-full bg-green-100 dark:bg-green-900
               flex items-center justify-center shrink-0"
             >
               <span className="text-sm font-bold text-green-700 dark:text-green-300">
@@ -152,7 +182,7 @@ export const ForumPage = () => {
                 {selected.userfullname}
               </p>
               <p className="text-xs text-gray-400 dark:text-gray-500">
-                {new Date(selected.created * 1000).toLocaleString('ru-RU')}
+                {new Date(selected.created * 1000).toLocaleString("ru-RU")}
               </p>
             </div>
           </div>
@@ -170,47 +200,55 @@ export const ForumPage = () => {
           </button>
         </div>
       </Layout>
-    )
+    );
   }
 
   return (
-    <Layout title={forum?.name ?? 'Форум'} showBack>
+    <Layout title={forum?.name ?? "Форум"} showBack>
       <div className="flex gap-4 items-start">
         <div className="flex-1 min-w-0 space-y-4">
           <div className="flex justify-end">
-                {isSaved ? (
-                  <button
-                    onClick={handleDelete}
-                    className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm
+            {isSaved ? (
+              <button
+                onClick={handleDelete}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm
                       font-medium cursor-pointer transition-colors
                       bg-green-100 text-green-700 hover:bg-red-100 hover:text-red-600
                       dark:bg-green-900 dark:text-green-300
                       dark:hover:bg-red-900/30 dark:hover:text-red-400"
-                  >
-                    <span>Удалить</span>
-                  </button>
-                ) : isOnline ? (
-                  <button
-                    onClick={handleSave}
-                    className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm
+              >
+                <span>Удалить</span>
+              </button>
+            ) : isOnline ? (
+              <button
+                onClick={handleSave}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm
                       font-medium cursor-pointer transition-colors
                       bg-green-500 text-white hover:bg-green-600
                       dark:bg-green-600 dark:hover:bg-green-500
                       disabled:opacity-50"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
-                      viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                      strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                      <polyline points="7 10 12 15 17 10"/>
-                      <line x1="12" y1="15" x2="12" y2="3"/>
-                    </svg>
-                    Сохранить
-                  </button>
-                ) : null}
-          </div>    
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="7 10 12 15 17 10" />
+                  <line x1="12" y1="15" x2="12" y2="3" />
+                </svg>
+                Сохранить
+              </button>
+            ) : null}
+          </div>
 
-          {forum?.intro && forum.intro.replace(/<[^>]*>/g, '').trim() && (
+          {forum?.intro && forum.intro.replace(/<[^>]*>/g, "").trim() && (
             <div
               className="rounded-2xl p-5
                 bg-white dark:bg-gray-800
@@ -220,11 +258,13 @@ export const ForumPage = () => {
             />
           )}
 
-          <div className="rounded-2xl overflow-hidden
+          <div
+            className="rounded-2xl overflow-hidden
             bg-white dark:bg-gray-800
             border border-green-200 dark:border-gray-700"
           >
-            <div className="px-4 py-3 border-b border-green-200 dark:border-gray-700
+            <div
+              className="px-4 py-3 border-b border-green-200 dark:border-gray-700
               flex items-center justify-between"
             >
               <h2 className="font-bold text-gray-900 dark:text-white">
@@ -234,10 +274,12 @@ export const ForumPage = () => {
 
             {discussions.length === 0 ? (
               <div className="px-4 py-8 text-center text-sm text-gray-400 dark:text-gray-500">
-                {!navigator.onLine ? 'Обсуждения недоступны офлайн' : 'Нет обсуждений'}
+                {!navigator.onLine
+                  ? "Обсуждения недоступны офлайн"
+                  : "Нет обсуждений"}
               </div>
             ) : (
-              discussions.map(disc => (
+              discussions.map((disc) => (
                 <button
                   key={disc.id}
                   onClick={() => setSelected(disc)}
@@ -252,11 +294,15 @@ export const ForumPage = () => {
                         {disc.name}
                       </p>
                       <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                        {disc.userfullname} · {new Date(disc.created * 1000).toLocaleDateString('ru-RU')}
+                        {disc.userfullname} ·{" "}
+                        {new Date(disc.created * 1000).toLocaleDateString(
+                          "ru-RU",
+                        )}
                       </p>
                     </div>
                     {disc.numreplies > 0 && (
-                      <span className="text-xs px-2 py-0.5 rounded-full shrink-0
+                      <span
+                        className="text-xs px-2 py-0.5 rounded-full shrink-0
                         bg-green-100 text-green-700
                         dark:bg-green-900 dark:text-green-300"
                       >
@@ -272,5 +318,5 @@ export const ForumPage = () => {
         <NotesPanel courseId={Number(courseId)} lessonId={Number(moduleId)} />
       </div>
     </Layout>
-  )
-}
+  );
+};

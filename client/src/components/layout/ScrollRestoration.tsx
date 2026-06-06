@@ -1,26 +1,26 @@
-import { useEffect } from 'react'
-import { useLocation } from 'react-router-dom'
+import { useEffect } from "react";
+import { useLocation } from "react-router-dom";
 
-const scrollPositions = new Map<string, number>()
+const scrollPositions = new Map<string, number>();
 
 export const ScrollRestoration = () => {
-  const location = useLocation()
+  const location = useLocation();
 
   useEffect(() => {
-    const key = location.pathname + location.search
+    const key = location.pathname + location.search;
 
-    const savedPosition = scrollPositions.get(key)
+    const savedPosition = scrollPositions.get(key);
 
     if (savedPosition !== undefined) {
-      window.scrollTo(0, savedPosition)
+      window.scrollTo(0, savedPosition);
     } else {
-      window.scrollTo(0, 0)
+      window.scrollTo(0, 0);
     }
 
     return () => {
-      scrollPositions.set(key, window.scrollY)
-    }
-  }, [location.pathname, location.search])
+      scrollPositions.set(key, window.scrollY);
+    };
+  }, [location.pathname, location.search]);
 
-  return null
-}
+  return null;
+};

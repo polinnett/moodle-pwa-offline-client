@@ -1,19 +1,17 @@
-import { createRoot } from 'react-dom/client'
-import { registerSW } from 'virtual:pwa-register'
-import './index.css'
-import App from './App.tsx'
+import { createRoot } from "react-dom/client";
+import { registerSW } from "virtual:pwa-register";
+import "./index.css";
+import App from "./App.tsx";
 
 const updateSW = registerSW({
   onNeedRefresh() {
-    if (confirm('Доступна новая версия приложения. Обновить?')) {
-      updateSW(true)
+    if (confirm("Доступна новая версия приложения. Обновить?")) {
+      updateSW(true);
     }
   },
   onOfflineReady() {
-    console.log('Приложение готово к работе офлайн')
+    console.log("Приложение готово к работе офлайн");
   },
-})
+});
 
-createRoot(document.getElementById('root')!).render(
-  <App />
-)
+createRoot(document.getElementById("root")!).render(<App />);

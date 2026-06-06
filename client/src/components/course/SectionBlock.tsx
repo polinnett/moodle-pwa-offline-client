@@ -1,26 +1,28 @@
-import type { CourseSection, CourseModule } from '../../types'
-import { fixImageUrls } from '../../utils/moodle'
-import { ModuleItem } from './ModuleItem'
+import type { CourseSection, CourseModule } from "../../types";
+import { fixImageUrls } from "../../utils/moodle";
+import { ModuleItem } from "./ModuleItem";
 
 export const SectionBlock = ({
   section,
   onModuleClick,
   refreshKey,
 }: {
-  section: CourseSection
-  onModuleClick: (module: CourseModule) => void
-  refreshKey: number
+  section: CourseSection;
+  onModuleClick: (module: CourseModule) => void;
+  refreshKey: number;
 }) => {
-  const visibleModules = section.modules.filter(m => m.visible !== 0)
-  if (visibleModules.length === 0) return null
+  const visibleModules = section.modules.filter((m) => m.visible !== 0);
+  if (visibleModules.length === 0) return null;
 
   return (
-    <div className="rounded-2xl overflow-hidden
+    <div
+      className="rounded-2xl overflow-hidden
       bg-white dark:bg-gray-800
       border border-green-200 dark:border-gray-700 shadow-sm"
     >
-      {section.name && section.name !== 'General' && (
-        <div className="px-4 py-3 border-b border-green-200 dark:border-gray-700
+      {section.name && section.name !== "General" && (
+        <div
+          className="px-4 py-3 border-b border-green-200 dark:border-gray-700
           bg-white dark:bg-gray-800"
         >
           <h2 className="font-bold text-xl text-gray-700 dark:text-gray-300">
@@ -40,7 +42,7 @@ export const SectionBlock = ({
       )}
 
       <div className="divide-green-200 dark:divide-gray-700 p-1">
-        {visibleModules.map(module => (
+        {visibleModules.map((module) => (
           <ModuleItem
             key={module.id}
             module={module}
@@ -50,5 +52,5 @@ export const SectionBlock = ({
         ))}
       </div>
     </div>
-  )
-}
+  );
+};

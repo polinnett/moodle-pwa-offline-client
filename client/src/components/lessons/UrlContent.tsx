@@ -1,13 +1,14 @@
-import type { CourseModule } from '../../types'
-import { ModuleDescription } from './ModuleDescription';
+import type { CourseModule } from "../../types";
+import { ModuleDescription } from "./ModuleDescription";
 
 export const UrlContent = ({ module }: { module: CourseModule }) => {
-  const url = module.contents?.[0]?.fileurl
+  const url = module.contents?.[0]?.fileurl;
 
   return (
     <div className="space-y-4">
       <ModuleDescription description={module.description} />
-      <div className="rounded-2xl p-6
+      <div
+        className="rounded-2xl p-6
         bg-white dark:bg-gray-800
         border border-green-100 dark:border-gray-700"
       >
@@ -29,5 +30,5 @@ export const UrlContent = ({ module }: { module: CourseModule }) => {
         )}
       </div>
     </div>
-  )
-}
+  );
+};

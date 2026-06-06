@@ -1,131 +1,139 @@
-import { useState, useEffect, useRef } from 'react'
-import { useOfflineStatus } from '../../hooks/useOfflineStatus'
+import { useState, useEffect, useRef } from "react";
+import { useOfflineStatus } from "../../hooks/useOfflineStatus";
 
 interface SnapshotItem {
-    id: number
-    name: string
-    timemodified?: number
+  id: number;
+  name: string;
+  timemodified?: number;
 }
 
 interface CourseUpdate {
-  id: number
-  course_name: string
-  description: string
-  detected_at: string
-  is_read: boolean
+  id: number;
+  course_name: string;
+  description: string;
+  detected_at: string;
+  is_read: boolean;
 }
 
-const BACKEND_URL = 'http://localhost:8001'
+const BACKEND_URL = "http://localhost:8001";
 
 const getAuthHeaders = () => ({
-  'Content-Type': 'application/json',
-  'Authorization': localStorage.getItem('moodle_token') ?? '',
-})
+  "Content-Type": "application/json",
+  Authorization: localStorage.getItem("moodle_token") ?? "",
+});
 
 export const CourseUpdates = ({
-    courseId,
-    courseName,
-    modules,
+  courseId,
+  courseName,
+  modules,
 }: {
-    courseId: number
-    courseName: string
-    modules: SnapshotItem[]
+  courseId: number;
+  courseName: string;
+  modules: SnapshotItem[];
 }) => {
-  const isOnline = useOfflineStatus()
-  const [updates, setUpdates] = useState<CourseUpdate[]>([])
-  const [visible, setVisible] = useState(false)
+  const isOnline = useOfflineStatus();
+  const [updates, setUpdates] = useState<CourseUpdate[]>([]);
+  const [visible, setVisible] = useState(false);
 
-  const isChecking = useRef(false)
+  const isChecking = useRef(false);
 
   const checkUpdates = async () => {
-    if (!isOnline || modules.length === 0) return
-    if (isChecking.current) return
-    isChecking.current = true
+    if (!isOnline || modules.length === 0) return;
+    if (isChecking.current) return;
+    isChecking.current = true;
     try {
       const res = await fetch(`${BACKEND_URL}/updates/check`, {
-        method: 'POST',
+        method: "POST",
         headers: getAuthHeaders(),
         body: JSON.stringify({
           course_id: courseId,
           course_name: courseName,
           modules,
         }),
-      })
-      const data = await res.json()
+      });
+      const data = await res.json();
       if (data.has_updates) {
-        await loadUpdates()
-        setVisible(true)
+        await loadUpdates();
+        setVisible(true);
       }
     } catch {
       // не удалось проверить обновления, сервер недоступен или нет соединения
+    } finally {
+      isChecking.current = false;
     }
-    finally {
-      isChecking.current = false
-    }
-  }
+  };
 
   const loadUpdates = async () => {
     try {
       const res = await fetch(`${BACKEND_URL}/updates/?course_id=${courseId}`, {
         headers: getAuthHeaders(),
-      })
-      const data = await res.json()
-      setUpdates(data)
-      if (data.length > 0) setVisible(true)
+      });
+      const data = await res.json();
+      setUpdates(data);
+      if (data.length > 0) setVisible(true);
     } catch {
       // не удалось загрузить уведомления – сервер недоступен
     }
-  }
+  };
 
   const markAllRead = async () => {
     try {
       await fetch(`${BACKEND_URL}/updates/read-all`, {
-        method: 'PATCH',
+        method: "PATCH",
         headers: getAuthHeaders(),
-      })
-      setUpdates([])
-      setVisible(false)
+      });
+      setUpdates([]);
+      setVisible(false);
     } catch {
       // не удалось отметить уведомления прочитанными
     }
-  }
+  };
 
   const markRead = async (id: number) => {
     try {
       await fetch(`${BACKEND_URL}/updates/${id}/read`, {
-        method: 'PATCH',
+        method: "PATCH",
         headers: getAuthHeaders(),
-      })
-      setUpdates(prev => prev.filter(u => u.id !== id))
-      if (updates.length <= 1) setVisible(false)
+      });
+      setUpdates((prev) => prev.filter((u) => u.id !== id));
+      if (updates.length <= 1) setVisible(false);
     } catch {
       // не удалось отметить уведомление прочитанным
     }
-  }
+  };
 
   useEffect(() => {
     if (isOnline && modules.length > 0) {
-      isChecking.current = false
-      checkUpdates()
-      loadUpdates()
+      isChecking.current = false;
+      checkUpdates();
+      loadUpdates();
     }
-  }, [courseId, isOnline, modules.length, modules.map(m => m.name).join(','), modules.map(m => m.timemodified).join(',')])
+  }, [
+    courseId,
+    isOnline,
+    modules.length,
+    modules.map((m) => m.name).join(","),
+    modules.map((m) => m.timemodified).join(","),
+  ]);
 
-  if (!visible || updates.length === 0) return null
+  if (!visible || updates.length === 0) return null;
 
   return (
-    <div className="rounded-2xl overflow-hidden
+    <div
+      className="rounded-2xl overflow-hidden
       bg-white dark:bg-gray-800
       border border-green-200 dark:border-gray-700 shadow-sm"
     >
-      <div className="px-4 py-3 border-b border-green-200 dark:border-gray-700
+      <div
+        className="px-4 py-3 border-b border-green-200 dark:border-gray-700
         flex items-center justify-between gap-2 flex-wrap"
       >
         <div className="flex items-center gap-2">
           <h3 className="font-semibold text-sm text-gray-700 dark:text-gray-300">
             Уведомления об изменения в курсе
           </h3>
-          <span className="text-xs px-2 py-0.5 rounded-full
+          <span
+            className="text-xs px-2 py-0.5 rounded-full
             bg-green-100 text-green-700
             dark:bg-green-900 dark:text-green-300"
           >
@@ -140,9 +148,9 @@ export const CourseUpdates = ({
           Отметить все прочитанными
         </button>
       </div>
-  
+
       <div className="divide-y divide-green-100 dark:divide-gray-700 p-1">
-        {updates.map(update => (
+        {updates.map((update) => (
           <div
             key={update.id}
             className="flex items-start justify-between gap-3
@@ -153,7 +161,7 @@ export const CourseUpdates = ({
                 {update.description}
               </p>
               <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                {new Date(update.detected_at).toLocaleString('ru-RU')}
+                {new Date(update.detected_at).toLocaleString("ru-RU")}
               </p>
             </div>
             <button
@@ -167,12 +175,12 @@ export const CourseUpdates = ({
           </div>
         ))}
       </div>
-  
+
       <div className="px-4 py-3 border-t border-green-100 dark:border-gray-700">
         <p className="text-xs text-gray-400 dark:text-gray-500">
           Рекомендуем обновить офлайн-пакет курса
         </p>
       </div>
     </div>
-  )
-}
+  );
+};

@@ -57,14 +57,14 @@ export const parseQuestion = (html: string) => {
   }
 
   const isShortAnswer = !!doc.querySelector(
-    'input[type="text"][name*="_answer"]'
+    'input[type="text"][name*="_answer"]',
   );
   const shortAnswerName = isShortAnswer
-    ? (
+    ? ((
         doc.querySelector(
-          'input[type="text"][name*="_answer"]'
+          'input[type="text"][name*="_answer"]',
         ) as HTMLInputElement
-      )?.name ?? ""
+      )?.name ?? "")
     : "";
 
   const matchRows: {
@@ -99,12 +99,12 @@ export const parseQuestion = (html: string) => {
       : null;
 
   const firstInput = doc.querySelector(
-    '.answer input[type="radio"]:not(.sr-only)'
+    '.answer input[type="radio"]:not(.sr-only)',
   ) as HTMLInputElement;
   const fieldName = firstInput?.name ?? "";
 
   const seqEl = doc.querySelector(
-    'input[name*="sequencecheck"]'
+    'input[name*="sequencecheck"]',
   ) as HTMLInputElement;
   const seqName = seqEl?.name ?? "";
   const seqValue = seqEl?.value ?? "1";
