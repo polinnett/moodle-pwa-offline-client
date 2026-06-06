@@ -130,7 +130,7 @@ export const CourseUpdates = ({
       >
         <div className="flex items-center gap-2">
           <h3 className="font-semibold text-sm text-gray-700 dark:text-gray-300">
-            Уведомления об изменения в курсе
+            Уведомления об изменениях в курсе
           </h3>
           <span
             className="text-xs px-2 py-0.5 rounded-full
