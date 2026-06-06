@@ -14,26 +14,7 @@ import { QuizContent } from '../components/lessons/QuizContent'
 import { UrlContent } from '../components/lessons/UrlContent'
 import { VideoContent } from '../components/lessons/VideoContent'
 import { NotesPanel } from '../components/features/NotesPanel'
-
-const getModuleType = (module: CourseModule) => {
-  if (module.modname === 'url') return 'url'
-  if (module.modname === 'quiz') return 'quiz'
-  if (module.modname === 'book') return 'book'
-
-  if (module.modname === 'page') {
-    const hasVideo = module.contents?.some(c => c.mimetype === 'video/mp4')
-    if (hasVideo) return 'video'
-    return 'page'
-  }
-
-  if (module.modname === 'resource') {
-    const mimetype = module.contents?.[0]?.mimetype
-    if (mimetype === 'video/mp4') return 'video'
-    if (mimetype === 'application/pdf') return 'pdf'
-  }
-
-  return 'unsupported'
-}
+import { getModuleType } from '../utils/moodle'
 
 export const LessonPage = () => {
   const { courseId, moduleId } = useParams<{ courseId: string; moduleId: string }>()

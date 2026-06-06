@@ -1,4 +1,5 @@
 import { getOfflineCourse, saveCourseOffline } from "../db";
+import { CourseModule } from "../types";
 
 export const proxyUrl = (url: string) =>
   url.replace("http://localhost:8000", "/moodle-api");
@@ -42,4 +43,24 @@ export const fixImageUrls = (html: string): string => {
     const separator = proxied.includes("?") ? "&" : "?";
     return `src="${proxied}${separator}token=${token}"`;
   });
+};
+
+export const getModuleType = (module: CourseModule): string => {
+  if (module.modname === "url") return "url";
+  if (module.modname === "quiz") return "quiz";
+  if (module.modname === "book") return "book";
+
+  if (module.modname === "page") {
+    const hasVideo = module.contents?.some((c) => c.mimetype === "video/mp4");
+    if (hasVideo) return "video";
+    return "page";
+  }
+
+  if (module.modname === "resource") {
+    const mimetype = module.contents?.[0]?.mimetype;
+    if (mimetype === "video/mp4") return "video";
+    if (mimetype === "application/pdf") return "pdf";
+  }
+
+  return "unsupported";
 };
