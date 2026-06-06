@@ -104,11 +104,12 @@ async def check_updates(
     return {"has_updates": True, "updates": changes}
 
 @router.get("/")
-async def get_updates(request: Request, db: AsyncSession = Depends(get_db)):
+async def get_updates(request: Request, course_id: int, db: AsyncSession = Depends(get_db)):
     user_hash = get_user_hash(request)
     result = await db.execute(
         select(CourseUpdate).where(
             CourseUpdate.user_token_hash == user_hash,
+            CourseUpdate.course_id == course_id,
             CourseUpdate.is_read == False,
         ).order_by(CourseUpdate.detected_at.desc())
     )

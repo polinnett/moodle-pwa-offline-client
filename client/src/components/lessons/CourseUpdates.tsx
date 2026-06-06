@@ -64,7 +64,7 @@ export const CourseUpdates = ({
 
   const loadUpdates = async () => {
     try {
-      const res = await fetch(`${BACKEND_URL}/updates/`, {
+      const res = await fetch(`${BACKEND_URL}/updates/?course_id=${courseId}`, {
         headers: getAuthHeaders(),
       })
       const data = await res.json()
