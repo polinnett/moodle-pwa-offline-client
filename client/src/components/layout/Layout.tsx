@@ -4,6 +4,7 @@ import { ThemeToggle } from './ThemeToggle'
 import { Logo } from '../ui/Logo'
 import { useOfflineStatus } from '../../hooks/useOfflineStatus'
 import { Icon } from '../ui/Icon'
+import { useTheme } from '../../contexts/ThemeContext'
 
 interface LayoutProps {
   children: React.ReactNode
@@ -16,6 +17,7 @@ export const Layout = ({ children, title, showBack = false }: LayoutProps) => {
   const location = useLocation()
   const isOnline = useOfflineStatus()
   const [menuOpen, setMenuOpen] = useState(false)
+  const { toggleTheme } = useTheme()
 
   const handleLogout = () => {
     localStorage.removeItem('moodle_token')
@@ -199,7 +201,7 @@ export const Layout = ({ children, title, showBack = false }: LayoutProps) => {
             </button>
 
             <button
-              onClick={() => { document.documentElement.classList.toggle('dark')}}
+              onClick={toggleTheme}
               className="w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium
                 cursor-pointer transition-colors
                 text-gray-600 hover:bg-green-50
