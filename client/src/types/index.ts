@@ -74,3 +74,21 @@ export interface Transcription {
   text: string;
   savedAt: number;
 }
+
+export interface UserInfo {
+  fullname: string;
+  firstname: string;
+  lastname: string;
+  username: string;
+  userpictureurl: string;
+  userissiteadmin: boolean;
+  sitename: string;
+}
+
+export interface MoodleUser {
+  id: number;
+  fullname: string;
+  email: string;
+  profileimageurl: string;
+  lastaccess: number;
+}

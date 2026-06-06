@@ -3,24 +3,7 @@ import { Layout } from '../components/layout/Layout'
 import { Icon } from '../components/ui/Icon'
 import { getSiteInfo, getSystemUsers } from '../api/moodle'
 import { useOfflineStatus } from '../hooks/useOfflineStatus'
-
-interface UserInfo {
-  fullname: string
-  firstname: string
-  lastname: string
-  username: string
-  userpictureurl: string
-  userissiteadmin: boolean
-  sitename: string
-}
-
-interface MoodleUser {
-  id: number
-  fullname: string
-  email: string
-  profileimageurl: string
-  lastaccess: number
-}
+import type { UserInfo, MoodleUser } from '../types'
 
 export const ProfilePage = () => {
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null)
@@ -28,17 +11,12 @@ export const ProfilePage = () => {
   const [loadingUsers, setLoadingUsers] = useState(false)
   const [storageInfo, setStorageInfo] = useState<{ used: number; quota: number } | null>(null)
   const [loading, setLoading] = useState(true)
-  const [lastActive, setLastActive] = useState<string | null>(null)
   const isOnline = useOfflineStatus()
   const [clearing, setClearing] = useState(false)
 
   const init = async () => {
     setLoading(true)
     try {
-      const lastActiveStr = localStorage.getItem('last_active')
-      setLastActive(lastActiveStr)
-      localStorage.setItem('last_active', new Date().toISOString())
-  
       if (!navigator.onLine) {
         const cached = localStorage.getItem('profile_cache')
         if (cached) setUserInfo(JSON.parse(cached))

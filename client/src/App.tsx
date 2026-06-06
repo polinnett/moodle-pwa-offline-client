@@ -14,6 +14,7 @@ import { ProfilePage } from './pages/ProfilePage'
 import { NotFoundPage } from './pages/NotFoundPage'
 
 const queryClient = new QueryClient()
+const isAuthenticated = !!localStorage.getItem('moodle_token')
 
 function App() {
   return (
@@ -45,7 +46,7 @@ function App() {
                 <RequireAuth><ProfilePage /></RequireAuth>
               } />
               <Route path="/" element={
-                localStorage.getItem('moodle_token')
+                isAuthenticated
                   ? <Navigate to="/home" replace />
                   : <Navigate to="/login" replace />
               } />

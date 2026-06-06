@@ -89,24 +89,24 @@ export const HomePage = () => {
         >
           <h2 className="font-bold text-gray-900 dark:text-white mb-3">
             Об авторе
-            </h2>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+          </h2>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
             Приложение разработано в рамках выпускной квалификационной работы
-            </p>
-            <p className="text-sm font-medium text-gray-800 dark:text-white mb-1">
+          </p>
+          <p className="text-sm font-medium text-gray-800 dark:text-white mb-1">
             Хафизова Полина Дмитриевна, 221-323
-            </p>
-            <p className="text-xs text-gray-600 dark:text-gray-400 mb-3">
+          </p>
+          <p className="text-xs text-gray-600 dark:text-gray-400 mb-3">
             Веб-технологии 2022-2026
-            </p>
-            <a
+          </p>
+          <a
             href="https://github.com/polinnett/moodle-pwa-offline-client"
             target="_blank"
             rel="noopener noreferrer"
             className="text-sm text-green-600 dark:text-green-400 hover:underline"
             >
             github.com/polinnett/moodle-pwa-offline-client
-            </a>
+          </a>
         </div>
 
       </div>
