@@ -2,7 +2,6 @@ import { Layout } from '../components/layout/Layout'
 import { Icon } from '../components/ui/Icon'
 
 export const NotFoundPage = () => {
-
   return (
     <Layout title="Страница не найдена">
       <div className="flex flex-col items-center justify-center py-24 gap-4">
