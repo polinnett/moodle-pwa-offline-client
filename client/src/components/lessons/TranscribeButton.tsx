@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
 import { transcribeVideo } from '../../api/moodle';
-import jsPDF from 'jspdf';
 import { Icon } from '../ui/Icon';
 import { saveTranscription, getTranscription } from '../../db'
 import { useOfflineStatus } from '../../hooks/useOfflineStatus'
@@ -12,6 +11,7 @@ export const TranscribeButton = ({ videoUrl, videoName }: { videoUrl: string; vi
     const abortRef = useRef<AbortController | null>(null)
     const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
     const [language, setLanguage] = useState('ru')
+    const isOnline = useOfflineStatus()
 
     useEffect(() => {
       getTranscription(videoUrl).then(saved => {
@@ -55,12 +55,7 @@ export const TranscribeButton = ({ videoUrl, videoName }: { videoUrl: string; vi
       setElapsed(0)
     }
   
-    const handleSavePDF = () => {
-      const doc = new jsPDF()
-    
-      doc.setFont('helvetica')
-      doc.setFontSize(16)
-    
+    const handleSavePDF = () => {    
       const printWindow = window.open('', '_blank')
       if (!printWindow) return
     
@@ -110,8 +105,6 @@ export const TranscribeButton = ({ videoUrl, videoName }: { videoUrl: string; vi
         printWindow.close()
       }, 500)
     }
-
-    const isOnline = useOfflineStatus()
   
     if (status === 'idle') {
       return (
