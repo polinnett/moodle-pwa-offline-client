@@ -29,7 +29,7 @@ PWA-клиент для LMS Moodle с механизмами офлайн-дос
 
 - Node.js 20+
 - Docker и Docker Compose 20+
-- LMS Moodle — [исходный код](https://github.com/moodle/moodle) и [moodle-docker](https://github.com/moodlehq/moodle-docker) для локального развертывания
+- LMS Moodle – [исходный код](https://github.com/moodle/moodle) и [moodle-docker](https://github.com/moodlehq/moodle-docker) для локального развертывания
 
 ## Запуск
 
@@ -62,11 +62,13 @@ npm run dev
 
 ## Структура репозитория
 
+```
 moodle-pwa-offline-client/
-├── client/ # PWA-клиент на React
-├── offline-backend/ # Сервис заметок и уведомлений
-├── whisper-service/ # Сервис расшифровки видео
-└── docker-compose.yml # Запуск всех сервисов
+├── client/              # PWA-клиент на React
+├── offline-backend/     # Сервис заметок и уведомлений
+├── whisper-service/     # Сервис расшифровки видео
+└── docker-compose.yml   # Запуск всех сервисов
+```
 
 ## Автор
 
