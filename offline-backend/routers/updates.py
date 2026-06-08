@@ -5,6 +5,7 @@ from database import get_db
 from models import CourseSnapshot, CourseUpdate
 from datetime import datetime
 from utils import get_user_hash, compute_hash, diff_modules, SnapshotItem
+from pydantic import BaseModel
 import json
 
 router = APIRouter(prefix="/updates", tags=["updates"])
